@@ -78,6 +78,18 @@
 .qk.hit{background:#9be6a8!important;color:#0b2a12!important}
 .qk.hit small{color:#0b2a12}
 
+/* labs */
+.lab{border:1px solid var(--border);border-radius:var(--radius-card);padding:16px 18px;margin:22px 0;background:var(--surface)}
+.lab-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:12px}
+.lab-head b{font-size:16px}
+.lab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 24px;margin-top:14px}
+.lab-ctl{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.lab-ctl span{display:flex;justify-content:space-between;font-weight:500}
+.lab-ctl input[type=range],.mixtable input[type=range]{accent-color:var(--hue);width:100%}
+.lab-ctl small{color:var(--muted);font-size:13px;line-height:1.4}
+.mixtable td{vertical-align:middle}
+.mixtable td:nth-child(2){min-width:200px}
+.mixtable td:nth-child(2) input{width:130px;vertical-align:middle}
 /* shared names used by older view templates */
 .eyebrow{font-size:13px;color:var(--muted);margin-bottom:6px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}

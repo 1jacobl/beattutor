@@ -207,27 +207,52 @@ function arpNotes(r){const out=[];r.chords.forEach((c,b)=>{const ns=c[1].split('
 
 /* ================= audio ================= */
 const hw={oct:0,vol:store.get('vol',.7),cut:store.get('cut',6000),nr:false,arp:true,knobs:store.get('knobs',[.7,.75,.3,.5,.2,.6,.4,.5])};
-let ctx,master,synthBus,synthLP,analyser,noiseBuf;
-function audio(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();const comp=ctx.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;master=ctx.createGain();master.gain.value=hw.vol;analyser=ctx.createAnalyser();analyser.fftSize=1024;master.connect(comp);comp.connect(analyser);analyser.connect(ctx.destination);synthLP=ctx.createBiquadFilter();synthLP.type='lowpass';synthLP.frequency.value=hw.cut;synthBus=ctx.createGain();synthBus.connect(synthLP);synthLP.connect(master);noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;scope()}if(ctx.state==='suspended')ctx.resume();return ctx}
+let ctx,master,analyser,noiseBuf,limiter,makeup,phoneHP,phoneHP2,phoneLP,conv;const BUS={};
+/* live mix state, shared by the mix lab, the 808 lab and normal playback */
+const MIXDEF={fader:{Kick:.85,Snare:.75,Hats:.5,'808':.8,Chords:.55,Melody:.6},lowcut:{Kick:0,Snare:120,Hats:350,'808':0,Chords:200,Melody:250},send:{Kick:0,Snare:.08,Hats:0,'808':0,Chords:.2,Melody:.28},cut:{Kick:false,Snare:true,Hats:true,'808':false,Chords:true,Melody:true},sc:true,limit:true,phone:false,drive:.45,glide:.07,len:1,detune:0,solo808:false};
+const MIX=JSON.parse(JSON.stringify(MIXDEF));
+const LANEBUS={Kick:'Kick',Snare:'Snare',Perc:'Snare',Hat:'Hats',Open:'Hats'};
+const BUSNAMES=['Kick','Snare','Hats','808','Chords','Melody'];
+function mkBus(name){const b={in:ctx.createGain(),lp:ctx.createBiquadFilter(),hp:ctx.createBiquadFilter(),duck:ctx.createGain(),fader:ctx.createGain(),send:ctx.createGain()};b.lp.type='lowpass';b.lp.frequency.value=(name==='Chords'||name==='Melody')?hw.cut:20000;b.hp.type='highpass';b.hp.Q.value=.7;
+ b.in.connect(b.lp);b.lp.connect(b.hp);b.hp.connect(b.duck);b.duck.connect(b.fader);b.fader.connect(master);b.fader.connect(b.send);b.send.connect(conv);return b}
+function applyMix(){if(!ctx)return;const t=ctx.currentTime;BUSNAMES.forEach(n=>{const b=BUS[n];b.fader.gain.setTargetAtTime(MIX.fader[n],t,.02);b.hp.frequency.setTargetAtTime(MIX.cut[n]&&MIX.lowcut[n]?MIX.lowcut[n]:10,t,.02);b.send.gain.setTargetAtTime(MIX.send[n],t,.02)});
+ limiter.threshold.setValueAtTime(MIX.limit?-9:0,t);limiter.ratio.setValueAtTime(MIX.limit?20:1,t);limiter.knee.setValueAtTime(MIX.limit?2:0,t);makeup.gain.setTargetAtTime(MIX.limit?1.4:1,t,.02);
+ phoneHP.frequency.setTargetAtTime(MIX.phone?220:10,t,.02);phoneHP2.frequency.setTargetAtTime(MIX.phone?220:10,t,.02);phoneLP.frequency.setTargetAtTime(MIX.phone?7000:22000,t,.02);dcurve=null}
+function setCut(v){hw.cut=v;['Chords','Melody'].forEach(n=>{if(BUS[n])BUS[n].lp.frequency.value=v})}
+function audio(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=hw.vol;
+ phoneHP=ctx.createBiquadFilter();phoneHP.type='highpass';phoneHP.frequency.value=10;phoneLP=ctx.createBiquadFilter();phoneLP.type='lowpass';phoneLP.frequency.value=22000;
+ limiter=ctx.createDynamicsCompressor();limiter.attack.value=.002;limiter.release.value=.12;makeup=ctx.createGain();
+ analyser=ctx.createAnalyser();analyser.fftSize=4096;analyser.smoothingTimeConstant=.78;
+ const safety=ctx.createDynamicsCompressor();safety.threshold.value=-1;safety.ratio.value=20;safety.attack.value=.001;
+ phoneHP2=ctx.createBiquadFilter();phoneHP2.type='highpass';phoneHP2.frequency.value=10;master.connect(phoneHP);phoneHP.connect(phoneHP2);phoneHP2.connect(phoneLP);phoneLP.connect(limiter);limiter.connect(makeup);makeup.connect(safety);safety.connect(analyser);analyser.connect(ctx.destination);
+ conv=ctx.createConvolver();const len=ctx.sampleRate*2.2,ir=ctx.createBuffer(2,len,ctx.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2)}conv.buffer=ir;const rv=ctx.createGain();rv.gain.value=.9;const rvhp=ctx.createBiquadFilter();rvhp.type='highpass';rvhp.frequency.value=300;conv.connect(rvhp);rvhp.connect(rv);rv.connect(master);
+ BUSNAMES.forEach(n=>BUS[n]=mkBus(n));applyMix();
+ noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+ if(ctx.state==='suspended')ctx.resume();return ctx}
+const B=lane=>BUS[LANEBUS[lane]||lane].in;
 function env(g,t,a,p,d){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(p,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d)}
-function noise(t,dur,type,f,p,d,q){const s=ctx.createBufferSource();s.buffer=noiseBuf;const fl=ctx.createBiquadFilter();fl.type=type;fl.frequency.value=f;if(q)fl.Q.value=q;const g=ctx.createGain();env(g,t,.001,p,d);s.connect(fl);fl.connect(g);g.connect(master);s.start(t);s.stop(t+dur)}
+function noise(t,dur,type,f,p,d,q,out){const s=ctx.createBufferSource();s.buffer=noiseBuf;const fl=ctx.createBiquadFilter();fl.type=type;fl.frequency.value=f;if(q)fl.Q.value=q;const g=ctx.createGain();env(g,t,.001,p,d);s.connect(fl);fl.connect(g);g.connect(out);s.start(t);s.stop(t+dur)}
+function duck808(t){if(!MIX.sc||!BUS['808'])return;const g=BUS['808'].duck.gain;g.cancelScheduledValues(t);g.setValueAtTime(1,t);g.linearRampToValueAtTime(.2,t+.008);g.linearRampToValueAtTime(1,t+.17)}
 const DR={
- Kick(t,v){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(48,t+.1);env(g,t,.002,.9*v,.32);o.connect(g);g.connect(master);o.start(t);o.stop(t+.4)},
- Snare(t,v){noise(t,.25,'highpass',1400,.5*v,.18);const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=190;env(g,t,.001,.35*v,.08);o.connect(g);g.connect(master);o.start(t);o.stop(t+.12);noise(t+.012,.1,'bandpass',1800,.3*v,.06,1)},
- Hat(t,v){noise(t,.06,'highpass',7500,.28*v,.035)},
- Open(t,v){noise(t,.3,'highpass',7000,.22*v,.22)},
- Perc(t,v){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(900,t);o.frequency.exponentialRampToValueAtTime(600,t+.05);env(g,t,.001,.25*v,.07);o.connect(g);g.connect(master);o.start(t);o.stop(t+.1)}
+ Kick(t,v){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(48,t+.1);env(g,t,.002,.9*v,.32);o.connect(g);g.connect(B('Kick'));o.start(t);o.stop(t+.4);noise(t,.02,'highpass',3000,.25*v,.012,0,B('Kick'));duck808(t)},
+ Snare(t,v){const out=B('Snare');noise(t,.25,'highpass',1400,.5*v,.18,0,out);const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=190;env(g,t,.001,.35*v,.08);o.connect(g);g.connect(out);o.start(t);o.stop(t+.12);noise(t+.012,.1,'bandpass',1800,.3*v,.06,1,out)},
+ Hat(t,v){noise(t,.06,'highpass',7500,.28*v,.035,0,B('Hat'))},
+ Open(t,v){noise(t,.3,'highpass',7000,.22*v,.22,0,B('Open'))},
+ Perc(t,v){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(900,t);o.frequency.exponentialRampToValueAtTime(600,t+.05);env(g,t,.001,.25*v,.07);o.connect(g);g.connect(B('Perc'));o.start(t);o.stop(t+.1)}
 };
-let dcurve;function curve(){if(dcurve)return dcurve;const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++)c[i]=Math.tanh((i*2/n-1)*3);return dcurve=c}
-function play808(t,m,dur,from){const o=ctx.createOscillator(),g=ctx.createGain(),ws=ctx.createWaveShaper();ws.curve=curve();const f=freq(m);if(from){o.frequency.setValueAtTime(freq(from),t);o.frequency.exponentialRampToValueAtTime(f,t+.07)}else o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.55,t+.005);g.gain.setValueAtTime(.55,t+Math.max(.02,dur-.05));g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(ws);ws.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.02)}
-function tone(t,m,dur,timbre,vol=1){const g=ctx.createGain(),f=freq(m);let ns=[];
+let dcurve;function curve(){if(dcurve)return dcurve;const n=2048,c=new Float32Array(n),k=1+MIX.drive*14;for(let i=0;i<n;i++){const x=i*2/n-1;c[i]=Math.tanh(x*k)/Math.tanh(k)}return dcurve=c}
+function play808(t,m,dur,from){const o=ctx.createOscillator(),g=ctx.createGain(),ws=ctx.createWaveShaper(),pre=ctx.createGain();ws.curve=curve();ws.oversample='2x';pre.gain.value=.9;o.detune.value=MIX.detune;const f=freq(m);
+ if(from&&MIX.glide>0){o.frequency.setValueAtTime(freq(from),t);o.frequency.exponentialRampToValueAtTime(f,t+MIX.glide)}else o.frequency.setValueAtTime(f,t);
+ const d=Math.max(.08,dur*MIX.len);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.6,t+.004);g.gain.setValueAtTime(.6,t+Math.max(.02,d-.05));g.gain.exponentialRampToValueAtTime(.0001,t+d);
+ o.connect(pre);pre.connect(ws);ws.connect(g);g.connect(BUS['808'].in);o.start(t);o.stop(t+d+.02)}
+function tone(t,m,dur,timbre,vol=1,bus='Chords'){const g=ctx.createGain(),f=freq(m);let ns=[];
  if(timbre==='saw'){const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;for(const d of[-12,0,12]){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=d;o.connect(lp);ns.push(o)}lp.connect(g);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.06*vol,t+.01);g.gain.setValueAtTime(.06*vol,t+Math.max(.02,dur-.05));g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
  else if(timbre==='bell'){const o=ctx.createOscillator(),o2=ctx.createOscillator(),g2=ctx.createGain();o.frequency.value=f;o2.frequency.value=f*3.5;g2.gain.value=.4;o2.connect(g2);g2.connect(g);o.connect(g);ns=[o,o2];env(g,t,.003,.13*vol,Math.min(dur,1.1))}
  else if(timbre==='pluck'){const o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;o.connect(g);ns=[o];env(g,t,.003,.14*vol,.35)}
  else{const o=ctx.createOscillator(),o2=ctx.createOscillator(),g2=ctx.createGain();o.frequency.value=f;o2.type='triangle';o2.frequency.value=f*2;g2.gain.value=.15;o2.connect(g2);g2.connect(g);o.connect(g);ns=[o,o2];g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.1*vol,t+.008);g.gain.exponentialRampToValueAtTime(.035*vol,t+.4);g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.45,dur))}
- g.connect(synthBus);ns.forEach(o=>{o.start(t);o.stop(t+Math.max(.5,dur)+.05)})}
-function playNote(m,timbre='keys'){audio();tone(ctx.currentTime+.01,m,.9,timbre)}
-function scope(){const c=$('#scope');if(!c)return;const g=c.getContext('2d'),buf=new Uint8Array(analyser.fftSize);(function draw(){analyser.getByteTimeDomainData(buf);g.clearRect(0,0,c.width,c.height);g.lineWidth=2;g.strokeStyle='#ff9a3c';g.shadowColor='#ff9a3c';g.shadowBlur=6;g.beginPath();for(let i=0;i<buf.length;i+=2){const x=i/buf.length*c.width,y=buf[i]/255*c.height;i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();requestAnimationFrame(draw)})()}
+ g.connect(BUS[bus].in);ns.forEach(o=>{o.start(t);o.stop(t+Math.max(.5,dur)+.05)})}
+function playNote(m,timbre='keys'){audio();tone(ctx.currentTime+.01,m,.9,timbre,1,'Melody')}
+function scope(){}
 
 /* ================= sequencer ================= */
 let cur=JSON.parse(JSON.stringify(RMAP[store.get('beat','rage')]||RECIPES[0]));
@@ -238,10 +263,10 @@ function setBeat(id){if(seq.on)stopSeq();cur=JSON.parse(JSON.stringify(RMAP[id])
 function startSeq(){audio();clearInterval(seq.timer);seq.on=true;seq.step=0;seq.next=ctx.currentTime+.08;seq.last=null;seq.timer=setInterval(tick,25);document.body.classList.add('playing');syncBtns()}
 function stopSeq(){seq.on=false;clearInterval(seq.timer);document.body.classList.remove('playing');$$('.st.now').forEach(e=>e.classList.remove('now'));$$('.pr-note.hot').forEach(e=>e.classList.remove('hot'));$('#tPos').innerHTML='Bar <b>1</b> · beat <b>1</b>';litChord([]);syncBtns()}
 function tick(){const r=cur,sd=60/r.bpm/4,total=r.chords.length*16;while(seq.next<ctx.currentTime+.12){const s=seq.step%total,bar=Math.floor(s/16),i=s%16,t=seq.next+(i%2?r.swing*sd*.5:0);
- if(seq.layers.drums)for(const[l,p]of Object.entries(r.drums)){const c=p[i];if(c==='x')DR[l](t,1);else if(c==='g')DR[l](t,.4);else if(c==='r'){DR[l](t,.9);DR[l](t+sd/2,.6)}else if(c==='t'){for(let k=0;k<3;k++)DR[l](t+k*sd/3,.9-k*.15)}}
+ if(seq.layers.drums)for(const[l,p]of Object.entries(r.drums)){if(MIX.solo808&&l!=='Kick')continue;const c=p[i];if(c==='x')DR[l](t,1);else if(c==='g')DR[l](t,.4);else if(c==='r'){DR[l](t,.9);DR[l](t+sd/2,.6)}else if(c==='t'){for(let k=0;k<3;k++)DR[l](t+k*sd/3,.9-k*.15)}}
  const ns=r.chords[bar][1].split(' ').map(midiOf);
- if(i===0&&seq.layers.chords)ns.forEach(m=>tone(t,m,sd*16*.98,r.timbre,r.timbre==='saw'?1:.8));
- if(r.arp&&seq.layers.arp&&i%2===0)tone(t,ns[ARP[(i/2)%8]%ns.length]+12,sd*1.8,r.arp,.7);
+ if(i===0&&seq.layers.chords&&!MIX.solo808)ns.forEach(m=>tone(t,m,sd*16*.98,r.timbre,r.timbre==='saw'?1:.8,'Chords'));
+ if(r.arp&&seq.layers.arp&&!MIX.solo808&&i%2===0)tone(t,ns[ARP[(i/2)%8]%ns.length]+12,sd*1.8,r.arp,.7,'Melody');
  if(seq.layers.bass){const c=r.bass[i];if(c==='x'||c==='^'){let e=i+1;while(e<16&&r.bass[e]==='.')e++;const m=rootMidi(r,bar)+(c==='^'?12:0);play808(t,m,sd*(e-i)*.95,c==='^'?seq.last:null);seq.last=m}}
  const at=seq.next;setTimeout(()=>vis(s),Math.max(0,(at-ctx.currentTime)*1000));seq.next+=sd;seq.step++}}
 function vis(s){if(!seq.on)return;const r=cur,total=r.chords.length*16,i=s%16,bar=Math.floor(s/16);
@@ -364,8 +389,8 @@ function dragY(el,onMove,spring){el.addEventListener('pointerdown',e=>{e.prevent
 function bindHW(root){
  $$('.hw-pad',root).forEach(p=>{if(p._b)return;p._b=1;p.addEventListener('pointerdown',e=>{e.preventDefault();audio();const fire=()=>{DR[p.dataset.lane](ctx.currentTime,hwState.full?1:.85);p.classList.add('lit');setTimeout(()=>p.classList.remove('lit'),90)};fire();let rt=null;if(hw.nr)rt=setInterval(fire,60/cur.bpm/4*1000);const up=()=>{clearInterval(rt);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};addEventListener('pointerup',up);addEventListener('pointercancel',up)})});
  bindKeys(root);
- $$('.hw-kn',root).forEach(kn=>{if(kn._b)return;kn._b=1;kn.addEventListener('pointerdown',e=>{e.preventDefault();const i=+kn.dataset.k,y0=e.clientY,v0=hw.knobs[i];const mv=ev=>{const v=Math.max(0,Math.min(1,v0+(y0-ev.clientY)/150));hw.knobs[i]=v;$$(`.hw-kn[data-k="${i}"] i`).forEach(x=>x.style.setProperty('--r',(-135+v*270)+'deg'));if(i===0){hw.vol=v;if(master)master.gain.value=v}if(i===1){hw.cut=200*Math.pow(60,v);if(synthLP)synthLP.frequency.value=hw.cut}};const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);store.set('knobs',hw.knobs);store.set('vol',hw.vol);store.set('cut',hw.cut)};addEventListener('pointermove',mv);addEventListener('pointerup',up)})});
- $$('.hw-wheel,.hw-strip',root).forEach(w=>{if(w._b)return;w._b=1;dragY(w,y=>{w.style.setProperty('--wy',y+'px');if(w.dataset.w==='pitch'&&synthBus){}},w.dataset.w==='pitch')});
+ $$('.hw-kn',root).forEach(kn=>{if(kn._b)return;kn._b=1;kn.addEventListener('pointerdown',e=>{e.preventDefault();const i=+kn.dataset.k,y0=e.clientY,v0=hw.knobs[i];const mv=ev=>{const v=Math.max(0,Math.min(1,v0+(y0-ev.clientY)/150));hw.knobs[i]=v;$$(`.hw-kn[data-k="${i}"] i`).forEach(x=>x.style.setProperty('--r',(-135+v*270)+'deg'));if(i===0){hw.vol=v;if(master)master.gain.value=v}if(i===1){hw.cut=200*Math.pow(60,v);setCut(hw.cut)}};const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);store.set('knobs',hw.knobs);store.set('vol',hw.vol);store.set('cut',hw.cut)};addEventListener('pointermove',mv);addEventListener('pointerup',up)})});
+ $$('.hw-wheel,.hw-strip',root).forEach(w=>{if(w._b)return;w._b=1;dragY(w,y=>{w.style.setProperty('--wy',y+'px')},w.dataset.w==='pitch')});
  $$('.hw-joy',root).forEach(j=>{if(j._b)return;j._b=1;j.addEventListener('pointerdown',e=>{e.preventDefault();const r=j.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;const mv=ev=>{j.style.setProperty('--jx',Math.max(-14,Math.min(14,ev.clientX-cx))+'px');j.style.setProperty('--jy',Math.max(-14,Math.min(14,ev.clientY-cy))+'px')};mv(e);const up=()=>{j.style.setProperty('--jx','0px');j.style.setProperty('--jy','0px');removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)})});
  $$('.hw-btn',root).forEach(b=>{if(b._b)return;b._b=1;b.addEventListener('click',()=>{const k=b.dataset.b;const all=id=>$$(`.hw-btn[data-b="${id}"]`);
   const msg={undo:'In FL (DAW mode) this is Undo; Shift + it is Redo',loop:'Loop toggles FL\'s loop recording in DAW mode',rec:'Record arms FL\'s recording; Shift + it quantizes',auto:'Automation: records knob moves into FL',shift:'Shift: hold it to reach the red labels',daw:'Plugin/DAW lit red = DAW mode, needed for FL\'s transport and screen',tap:'Tap tempo: tap to set the arp speed',full:'Full Level: every pad hit at full velocity',bank:'Bank A/B switches the pads between two sets of 8'};
@@ -400,6 +425,73 @@ function hwFig(){const k=K(),h=k.hw;
  const c={};items.forEach(([key],i)=>c[key]=i+1);
  return fig(hardware({co:c}),1060,items.map(x=>x[1]),k.short+' (drawing). Everything on it is playable.')}
 function controller(o={}){return midiMode()?fit(hardware(o),1060):fit(qwerty(o),760)}
+
+/* ================= mixing & 808: plugin drawings ================= */
+const fx=x=>Math.log10(x/20)/Math.log10(1000); // 20 Hz..20 kHz -> 0..1
+function eqCurve(w,h,bands){const pts=[];for(let i=0;i<=w;i+=3){const f=20*Math.pow(1000,i/w);let db=0;bands.forEach(b=>{if(b.t==='hp'){db+=-12*Math.log2(Math.max(1,b.f/f))*(f<b.f?1.4:0)}else if(b.t==='bell'){const o=Math.log2(f/b.f);db+=b.g*Math.exp(-(o*o)/(2*b.q*b.q))}else if(b.t==='shelf'){db+=b.g/(1+Math.pow(b.f/f,2))}});pts.push(`${i},${(h/2-db*h/36).toFixed(1)}`)}return pts.join(' ')}
+function peq2Mock(o={}){const c=o.co||{},W=620,H=200;const bands=o.bands||[{t:'hp',f:150,n:1},{t:'bell',f:320,g:-4,q:.6,n:3},{t:'bell',f:3000,g:2,q:.7,n:5}];const grid=[50,100,200,500,1000,2000,5000,10000].map(f=>`<line x1="${fx(f)*W}" x2="${fx(f)*W}" y1="0" y2="${H}" stroke="#3a4048"/><text x="${fx(f)*W+3}" y="${H-5}" fill="#9aa3ad" font-family="Barlow Condensed,sans-serif" font-size="12">${f>=1000?f/1000+'k':f}</text>`).join('');
+ const dots=bands.map(b=>{const x=fx(b.f)*W,y=H/2-(b.t==='bell'?b.g:b.t==='hp'?-3:b.g)*H/36;return `<circle cx="${x}" cy="${y}" r="8" fill="${['#ff6b6b','#ffb347','#ffe066','#7ee08f','#5fd0ff','#7f8cff','#d68cff'][b.n-1]}"/><text x="${x}" y="${y+4}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-size="12" font-weight="700" fill="#111">${b.n}</text>`}).join('');
+ return win('Fruity Parametric EQ 2 - '+(o.track||'Chords'),`<div style="background:#1d2024;border-radius:4px;position:relative"${co(c,'graph')}><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">${grid}<line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="#555c66"/><polyline points="${eqCurve(W,H,bands)}" fill="none" stroke="#ffb066" stroke-width="2.5"/>${dots}</svg></div>
+<div style="display:flex;gap:6px;margin-top:8px;align-items:center">${[1,2,3,4,5,6,7].map(n=>`<span class="fl-b ${bands.some(b=>b.n===n)?'lit':''}" style="min-width:34px"${n===1?co(c,'band'):''}>${n}</span>`).join('')}<span style="margin-left:12px;color:#9aa3ad"${co(c,'type')}>Band 1 type: <b style="color:#fff">High pass</b></span><span style="margin-left:auto;display:flex;gap:6px;align-items:center;color:#9aa3ad"${co(c,'out')}>Output <span class="knob" style="--r:0deg"></span></span></div>`,{w:o.w||660})}
+function limiterMock(o={}){const c=o.co||{};const kn=(l,r,k)=>`<span style="display:flex;flex-direction:column;align-items:center;gap:4px"${co(c,k)}><span class="knob" style="width:30px;height:30px;--r:${r}deg"></span><span style="color:#c9ced5;font-weight:700">${l}</span></span>`;
+ return win('Fruity Limiter - 808',`<div style="display:flex;gap:4px;margin-bottom:10px"><span class="fl-b">LIMIT</span><span class="fl-b lit"${co(c,'mode')}>COMP</span><span class="fl-b">NOISE GATE</span></div>
+<div style="display:flex;gap:16px;align-items:flex-start"><div style="display:flex;gap:16px">${kn('THRES',-60,'thres')}${kn('RATIO',70,'ratio')}${kn('KNEE',-90,'')}${kn('ATT',-120,'att')}${kn('REL',-30,'rel')}</div>
+<div style="margin-left:auto;display:flex;flex-direction:column;gap:6px;align-items:flex-end"><span style="color:#9aa3ad">SIDECHAIN</span><span class="dd" style="min-width:70px"${co(c,'sc')}>1 (Kick)</span></div></div>
+<div style="margin-top:10px;background:#1d2024;border-radius:4px;padding:6px"${co(c,'gr')}><svg width="560" height="56" viewBox="0 0 560 56" style="display:block">${Array.from({length:8},(_,i)=>`<path d="M${i*70} 6 L${i*70+4} 44 L${i*70+40} 8 L${i*70+70} 6" fill="none" stroke="#ff6b6b" stroke-width="2"/>`).join('')}<text x="4" y="54" fill="#9aa3ad" font-family="Barlow Condensed,sans-serif" font-size="12">gain reduction: the 808 dips each time the kick hits</text></svg></div>`,{w:o.w||600})}
+function fastDistMock(o={}){const c=o.co||{};const kn=(l,r,k)=>`<span style="display:flex;flex-direction:column;align-items:center;gap:4px"${co(c,k)}><span class="knob" style="width:34px;height:34px;--r:${r}deg"></span><span style="color:#c9ced5;font-weight:700">${l}</span></span>`;
+ return win('Fruity Fast Dist - 808',`<div style="display:flex;gap:22px;align-items:center;padding:6px 4px">${kn('PRE',40,'pre')}${kn('THRES',-40,'thres')}<span style="display:flex;flex-direction:column;gap:4px;align-items:center"${co(c,'type')}><span class="fl-b lit" style="min-width:30px">A</span><span class="fl-b" style="min-width:30px">B</span><span style="color:#c9ced5;font-weight:700">TYPE</span></span>${kn('MIX',60,'mix')}${kn('POST',-50,'post')}</div>`,{w:o.w||420})}
+function meterMock(o={}){const c=o.co||{};return win('Loudness meter (for example Youlean) - Master',`<div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap"><div${co(c,'int')}><div style="color:#9aa3ad">Integrated</div><div style="font:600 34px var(--ui);color:#fff">-8.2 <span style="font-size:15px;color:#9aa3ad">LUFS</span></div></div><div${co(c,'short')}><div style="color:#9aa3ad">Short-term</div><div style="font:600 22px var(--ui);color:#7ee08f">-7.4</div></div><div${co(c,'tp')}><div style="color:#9aa3ad">True peak</div><div style="font:600 22px var(--ui);color:#ffb347">-1.0 dBTP</div></div><div><div style="color:#9aa3ad">Range</div><div style="font:600 22px var(--ui);color:#fff">4.1 LU</div></div></div>
+<div style="margin-top:10px;background:#1d2024;border-radius:4px;padding:6px"${co(c,'hist')}><svg width="560" height="60" viewBox="0 0 560 60" style="display:block"><line x1="0" x2="560" y1="16" y2="16" stroke="#ffb347" stroke-dasharray="4 4"/><polyline points="${Array.from({length:57},(_,i)=>`${i*10},${(26+Math.sin(i*.7)*6+(i<8?20-i*2.5:0)).toFixed(0)}`).join(' ')}" fill="none" stroke="#7ee08f" stroke-width="2"/></svg></div>`,{w:o.w||600})}
+function sidechainMock(o={}){const c=o.co||{};const strip=(n,i,sel)=>`<div class="mx-s ${sel?'sel':''}" style="width:64px"${i===1?co(c,'kick'):''}><span class="mx-n">${i} ${n}</span><div class="mx-io" style="height:90px"><div class="mx-m"><i style="height:${[0,70,40,30,55][i]}%"></i></div><div class="mx-f" style="--y:30%"><b></b></div></div><span class="mx-route on"${i===4?co(c,'arrow'):''}></span></div>`;
+ return `<div class="fl" data-ui style="display:flex;gap:18px;align-items:flex-start">${win('Mixer',`<div class="mx">${['','Kick','Snare','Hats','808'].slice(1).map((n,k)=>strip(n,k+1,k===0)).join('')}</div>`,{w:320})}<div class="menu" style="width:250px;margin-top:70px"${co(c,'menu')}><div>Route to this track only</div><div class="hl"${co(c,'side')}>Sidechain to this track</div><hr><div>Rename, color and icon</div></div></div>`}
+
+/* ================= spectrum + level meter (live) ================= */
+let specRAF=null;const fbuf={};
+function drawSpec(){const cvs=$$('canvas.spec');const meters=$$('.lvl');if(!cvs.length&&!meters.length){specRAF=null;return}
+ if(analyser){if(!fbuf.f||fbuf.f.length!==analyser.frequencyBinCount){fbuf.f=new Float32Array(analyser.frequencyBinCount);fbuf.t=new Float32Array(analyser.fftSize)}analyser.getFloatFrequencyData(fbuf.f);analyser.getFloatTimeDomainData(fbuf.t)}
+ const ny=ctx?ctx.sampleRate/2:22050;
+ cvs.forEach(cv=>{const dpr=devicePixelRatio||1,W=cv.clientWidth*dpr,H=cv.clientHeight*dpr;if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;const g=cv.getContext('2d');g.fillStyle='#1d2024';g.fillRect(0,0,W,H);
+  const ph=fx(150)*W;g.fillStyle='rgba(255,107,107,.10)';g.fillRect(0,0,ph,H);
+  g.font=`600 ${11*dpr}px "Barlow Condensed",sans-serif`;g.fillStyle='#9aa3ad';[30,60,100,250,500,1000,2500,5000,10000].forEach(f=>{const x=fx(f)*W;g.fillRect(x,0,1,H);g.fillText(f>=1000?f/1000+'k':String(f),x+3*dpr,H-5*dpr)});g.fillStyle='#ff9b9b';g.fillText('phone speakers barely play this',5*dpr,14*dpr);
+  if(fbuf.f){g.beginPath();for(let x=0;x<W;x+=2){const f=20*Math.pow(1000,x/W);const bin=Math.min(fbuf.f.length-1,Math.round(f/ny*fbuf.f.length));const db=fbuf.f[bin];const y=H-Math.max(0,Math.min(1,(db+100)/90))*H;x?g.lineTo(x,y):g.moveTo(x,y)}g.lineTo(W,H);g.lineTo(0,H);g.closePath();g.fillStyle='rgba(126,224,143,.35)';g.fill();g.strokeStyle='#7ee08f';g.lineWidth=1.5*dpr;g.stroke()}});
+ meters.forEach(m=>{let rms=0,pk=0;if(fbuf.t){for(const v of fbuf.t){rms+=v*v;pk=Math.max(pk,Math.abs(v))}rms=Math.sqrt(rms/fbuf.t.length)}const db=rms>0?20*Math.log10(rms):-90,pdb=pk>0?20*Math.log10(pk):-90;m._hold=Math.max(pdb,(m._hold??-90)-.3);
+  m.querySelector('.lvl-bar i').style.width=Math.max(0,Math.min(100,(db+40)/40*100))+'%';m.querySelector('.lvl-pk').style.left=Math.max(0,Math.min(100,(m._hold+40)/40*100))+'%';m.querySelector('.lvl-txt').textContent=seq.on?`level ${db.toFixed(1)} dB · peak ${m._hold.toFixed(1)} dB`:'press play to measure'});
+ specRAF=requestAnimationFrame(drawSpec)}
+function startSpec(){if(!specRAF)specRAF=requestAnimationFrame(drawSpec)}
+const specBox=()=>`<canvas class="spec" style="display:block;width:100%;height:150px;border-radius:6px" aria-label="Live frequency spectrum of the preview"></canvas>`;
+const levelBox=()=>`<div class="lvl" style="margin-top:10px"><div class="lvl-bar" style="position:relative;height:10px;border-radius:5px;background:var(--active);overflow:hidden"><i style="display:block;height:100%;width:0;background:var(--positive)"></i><b class="lvl-pk" style="position:absolute;top:0;bottom:0;width:2px;background:var(--text);left:0"></b></div><div class="small muted lvl-txt tnum" style="margin-top:4px">press play to measure</div></div>`;
+
+/* ================= 808 lab ================= */
+function lab808(){return `<div class="lab" id="lab808"><div class="lab-head"><b>808 lab</b><span class="small muted">Kick and 808 from ${cur.name} at ${cur.bpm} BPM. Change one thing at a time and listen.</span></div>
+${specBox()}
+<div class="lab-grid">
+<label class="lab-ctl"><span>Distortion <b id="v-drive" class="tnum"></b></span><input type="range" id="l-drive" min="0" max="1" step=".01"><small>More harmonics: the 808 starts to show up above 150 Hz, where phones can play it.</small></label>
+<label class="lab-ctl"><span>Glide <b id="v-glide" class="tnum"></b></span><input type="range" id="l-glide" min="0" max=".2" step=".005"><small>How long the slide into the octave note takes (Porta's slide time).</small></label>
+<label class="lab-ctl"><span>Length <b id="v-len" class="tnum"></b></span><input type="range" id="l-len" min=".2" max="1" step=".05"><small>Short 808s bounce (plugg); long ones carry the low end (rage, trap).</small></label>
+<label class="lab-ctl"><span>Tuning <b id="v-det" class="tnum"></b></span><input type="range" id="l-det" min="-60" max="60" step="5"><small>Push it off and hear the low end go muddy against the chords.</small></label>
+</div>
+<div class="row" style="margin-top:12px"><button class="btn primary" id="l-play">Play</button><label class="chip"><input type="checkbox" id="l-solo"> Kick + 808 only</label><label class="chip"><input type="checkbox" id="l-sc"> Sidechain 808 to kick</label><label class="chip"><input type="checkbox" id="l-phone"> Phone speaker</label><button class="btn" id="l-reset">Reset</button></div></div>`}
+function bindLab808(){const L=$('#lab808');if(!L)return;const set=()=>{$('#l-drive').value=MIX.drive;$('#l-glide').value=MIX.glide;$('#l-len').value=MIX.len;$('#l-det').value=MIX.detune;$('#l-solo').checked=MIX.solo808;$('#l-sc').checked=MIX.sc;$('#l-phone').checked=MIX.phone;$('#v-drive').textContent=Math.round(MIX.drive*100)+'%';$('#v-glide').textContent=Math.round(MIX.glide*1000)+' ms';$('#v-len').textContent=Math.round(MIX.len*100)+'%';$('#v-det').textContent=(MIX.detune>0?'+':'')+MIX.detune+' cents'};set();
+ const on=(id,k,f)=>$(id).addEventListener('input',e=>{MIX[k]=f(e.target);dcurve=null;audio();applyMix();set()});
+ on('#l-drive','drive',t=>+t.value);on('#l-glide','glide',t=>+t.value);on('#l-len','len',t=>+t.value);on('#l-det','detune',t=>+t.value);on('#l-solo','solo808',t=>t.checked);on('#l-sc','sc',t=>t.checked);on('#l-phone','phone',t=>t.checked);
+ $('#l-play').onclick=()=>{seq.on?stopSeq():startSeq();$('#l-play').textContent=seq.on?'Stop':'Play';startSpec()};$('#l-reset').onclick=()=>{['drive','glide','len','detune','sc','phone','solo808'].forEach(k=>MIX[k]=MIXDEF[k]);audio();applyMix();set();toast('808 lab reset')};startSpec()}
+
+/* ================= mix lab ================= */
+const ROUGH={fader:{Kick:.95,Snare:.95,Hats:.95,'808':.95,Chords:.95,Melody:.95},cut:{Kick:false,Snare:false,Hats:false,'808':false,Chords:false,Melody:false},send:{Kick:0,Snare:0,Hats:0,'808':0,Chords:0,Melody:0},sc:false,limit:false};
+function mixLab(){return `<div class="lab" id="mixlab"><div class="lab-head"><b>Mix lab</b><span class="small muted">The ${cur.name} beat on six mixer tracks. Start from the rough mix, then fix it one move at a time.</span></div>
+<div class="row" style="margin-bottom:10px"><button class="btn primary" id="m-play">Play</button><button class="btn" id="m-rough">Load rough mix</button><button class="btn" id="m-fin">Load finished mix</button><label class="chip"><input type="checkbox" id="m-phone"> Phone speaker</label></div>
+<div class="tablewrap"><table class="mixtable"><thead><tr><th>Track</th><th>Fader</th><th>Low cut</th><th>Reverb send</th></tr></thead><tbody>${BUSNAMES.map(n=>`<tr><td><b>${n}</b></td><td><input type="range" min="0" max="1" step=".01" data-f="${n}" aria-label="${n} fader"> <span class="tnum small muted" data-fv="${n}"></span></td><td>${MIX.lowcut[n]?`<label><input type="checkbox" data-c="${n}"> ${MIX.lowcut[n]} Hz</label>`:'<span class="muted small">keep the lows</span>'}</td><td><input type="range" min="0" max=".5" step=".01" data-s="${n}" aria-label="${n} reverb send"></td></tr>`).join('')}</tbody></table></div>
+<div class="row" style="margin-top:10px"><label class="chip"><input type="checkbox" id="m-sc"> Sidechain 808 to kick</label><label class="chip"><input type="checkbox" id="m-lim"> Master limiter</label></div>
+<div style="margin-top:12px">${specBox()}${levelBox()}</div></div>`}
+function bindMixLab(){const L=$('#mixlab');if(!L)return;const sync=()=>{$$('[data-f]',L).forEach(i=>{i.value=MIX.fader[i.dataset.f];L.querySelector(`[data-fv="${i.dataset.f}"]`).textContent=(MIX.fader[i.dataset.f]>0?(20*Math.log10(MIX.fader[i.dataset.f])).toFixed(1):'-∞')+' dB'});$$('[data-c]',L).forEach(i=>i.checked=MIX.cut[i.dataset.c]);$$('[data-s]',L).forEach(i=>i.value=MIX.send[i.dataset.s]);$('#m-sc').checked=MIX.sc;$('#m-lim').checked=MIX.limit;$('#m-phone').checked=MIX.phone};sync();
+ const upd=()=>{audio();applyMix();sync()};
+ $$('[data-f]',L).forEach(i=>i.addEventListener('input',()=>{MIX.fader[i.dataset.f]=+i.value;upd()}));$$('[data-c]',L).forEach(i=>i.addEventListener('change',()=>{MIX.cut[i.dataset.c]=i.checked;upd()}));$$('[data-s]',L).forEach(i=>i.addEventListener('input',()=>{MIX.send[i.dataset.s]=+i.value;upd()}));
+ $('#m-sc').onchange=e=>{MIX.sc=e.target.checked;upd()};$('#m-lim').onchange=e=>{MIX.limit=e.target.checked;upd()};$('#m-phone').onchange=e=>{MIX.phone=e.target.checked;upd()};
+ $('#m-rough').onclick=()=>{Object.assign(MIX,JSON.parse(JSON.stringify(ROUGH)));upd();toast('Rough mix: everything loud, nothing cut')};
+ $('#m-fin').onclick=()=>{['fader','cut','send','sc','limit'].forEach(k=>MIX[k]=JSON.parse(JSON.stringify(MIXDEF[k])));upd();toast('Finished mix loaded')};
+ $('#m-play').onclick=()=>{MIX.solo808=false;seq.on?stopSeq():startSeq();$('#m-play').textContent=seq.on?'Stop':'Play';startSpec()};startSpec()}
+function bindLabs(){bindLab808();bindMixLab();if($('canvas.spec'))startSpec()}
+function delayTable(bpm){const q=60000/bpm;const rows=[['1/4 note',q],['1/8 note',q/2],['Dotted 1/8',q*.75],['1/8 triplet',q/3],['1/16 note',q/4],['1 bar',q*4]];return `<div class="tablewrap"><table><thead><tr><th>Note value at ${bpm} BPM</th><th class="num">Milliseconds</th><th>Use it for</th></tr></thead><tbody>${rows.map(([n,ms],i)=>`<tr><td>${n}</td><td class="num">${ms.toFixed(0)} ms</td><td class="muted">${['Slow echoes on a lead, delay throws on vocals','The standard echo for bells and plucks','Bouncy echoes that fill gaps','Rolling, swung echoes','Short slap on snares and claps','Reverb decay that clears before the next bar'][i]}</td></tr>`).join('')}</tbody></table></div>`}
 
 /* ================= lessons ================= */
 const demoDrums=[{name:'Kick',lane:'Kick',pat:'x.....x...x.....',color:'#ff7a59',trk:1},{name:'Clap',lane:'Snare',pat:'........x.......',color:'#ffcf5a',trk:2},{name:'Hat',lane:'Hat',pat:'x.x.x.x.x.x.rrx.',color:'#7fd1ff',trk:3},{name:'Open hat',lane:'Open',pat:'..............x.',color:'#a28bff',trk:4}];
@@ -498,14 +590,42 @@ ${fig(pianoRoll(hatRoll,{channel:'Hat',bars:2,lo:62,hi:71,h:150,snap:'1/3 step',
 ${midiMode()?tip('On your '+K().short,K().repeat):''}
 ${tip('Layering','A clap layered over the snare, both at the same time, gives a fuller backbeat. EQ each so one gives crack and one gives body.')}`},
 
-{id:'808',mod:'Building the beat',title:()=>'808s that hit and glide',min:30,body:()=>`
-<h2>Load and tune the 808</h2>
-<ol class="steps"><li>Drag an 808 sample into the Channel Rack. It loads in the Sampler. Click its name to open settings.</li><li>Find its real note (the file name often says it, or match it to a piano). If FL plays it at the wrong pitch, set the <b>root note</b>: right-click the matching key on the channel's keyboard → <b>Set root note</b>.</li><li>Turn on <b>Mono</b> and <b>Porta</b> so overlapping notes slide into each other.</li></ol>
-${fig(chSettings({co:{func:1,mono:2,porta:3,slide:4,root:5,ins:6}}),480,['Open the <b>FUNC</b> (miscellaneous functions) tab.','<b>Mono</b>: one 808 note at a time, so notes never stack into mud.','<b>Porta</b>: overlapping notes glide from one pitch to the next.','Slide time: how long the glide takes.','Root note: the key that plays the sample at its real pitch.','INS tab: the volume envelope. Short release so the 808 stops cleanly.'],'Sampler channel settings (drawing)')}
-<h2>Write the 808 line</h2>
-${fig(pianoRoll(bassNotes(RMAP.rage),{channel:'808',co:{grid:1,note:2,ghost:3},coNote:4,lo:38,hi:58,h:200}),860,['Each note sits on the root of the chord for that bar, mostly lined up with the kick.','Pink note = jump an octave up at the end of the bar. With Porta on, it slides.','Turn on Ghost notes to see the chords behind the 808 while you write.'],'808 line from the Rage recipe (drawing)')}
-${path(`<ol class="steps"><li>Move down with ${K().oct} so the key's root is under your fingers.</li><li>With drums playing, record the roots of each chord, mostly with the kick.</li><li>Add movement: an octave jump at the end of a bar, or a slide into the next root.</li><li>Use ${K().pitch} for pitch dives on the last note of a phrase.</li></ol>`,`<ol class="steps"><li>Open the 808's piano roll with Ghost notes on.</li><li>Draw the chord roots where the kick hits.</li><li>For a slide, overlap two notes with Porta on, or use the slide note tool.</li></ol>`)}
-<h2>Make it heard on phones</h2><ul><li>Saturate it: ${plug('fastdist')} or ${plug('blood')} on its mixer track. Distortion adds harmonics small speakers can play.</li><li>Low-cut everything else at 80–120 Hz with ${plug('peq2')}.</li><li>Kick and 808 clash? Sidechain: ${plug('limiter')} in COMP mode on the 808, right-click the kick's route arrow → <b>Sidechain to this track</b>, pick it as the limiter's input. Or shorten the 808 under the kick.</li></ul>`},
+{id:'808',mod:'Building the beat',title:()=>'808s: tune, glide, distort, fit',min:50,body:()=>`
+<p>The 808 is a long, low sine-like tone with a punchy start. Its main note, the <b>fundamental</b>, sits around 30–60 Hz. That is the part you feel in a car, and the part a phone speaker cannot play at all. Getting an 808 right means four things: it is <b>in tune</b>, it <b>moves</b> with the song, it is <b>heard on small speakers</b>, and it <b>does not fight the kick</b>.</p>
+${lab808()}
+<h2>Pick the right 808</h2>
+<div class="tablewrap"><table><thead><tr><th>Style</th><th>808 to choose</th><th>Why</th></tr></thead><tbody>
+<tr><td>Rage, trap</td><td>Long, distorted, with a hard attack</td><td>It carries the whole low end and the hook's energy</td></tr>
+<tr><td>Plugg, pluggnb</td><td>Short, round, clean</td><td>Quick bouncy notes leave space for bells and chords</td></tr>
+<tr><td>R&B</td><td>Soft sub or a bass guitar sound</td><td>Warmth without the boom covering the vocal</td></tr>
+</tbody></table></div>
+<p>Most 808 samples have their note in the file name ("808 Boom (F#)"). If not, you will find it in the next step.</p>
+<h2>Tune it</h2>
+<ol class="steps"><li>Drag the 808 into the Channel Rack and open the channel (click its name).</li><li>Load a piano on another channel. Play the 808's lowest note together with piano notes until one sounds like the same note, not a wobble. That is its real pitch.</li><li>If FL plays it on the wrong key, right-click that key on the 808 channel's mini keyboard and choose <b>Set root note</b>. Now the C key plays a C, and the 808 follows your chords.</li><li>Check it against the chords: in the 808 lab above, move <b>Tuning</b> off and back. An out-of-tune 808 sounds like mud, not like a wrong note, which is why people miss it.</li></ol>
+<h2>Make it glide</h2>
+${fig(chSettings({co:{func:1,mono:2,porta:3,slide:4,root:5,ins:6}}),480,['Open the FUNC (miscellaneous functions) tab of the 808 channel.','<b>Mono</b>: one 808 note at a time. Overlapping notes never stack into mud.','<b>Porta</b>: overlapping notes glide from one pitch to the next.','Slide time: how long the glide takes. The 808 lab\'s Glide slider is this knob.','Root note: the key that plays the sample at its real pitch.','INS tab: the volume envelope. A short release stops the 808 cleanly at the end of each note.'],'Sampler channel settings (drawing)')}
+<p>With Mono and Porta on, a glide happens whenever two notes overlap in the piano roll. Three moves cover most trap and rage basslines:</p>
+<ul><li><b>Octave jump</b>: the root, then the same note an octave up on the last 8th of the bar, sliding back down.</li><li><b>Slide into the downbeat</b>: a short note a few semitones below the next chord's root, overlapping into it.</li><li><b>Dive</b>: the last note of a phrase bent down an octave with ${K().pitch}, recorded as automation.</li></ul>
+${fig(pianoRoll(bassNotes(RMAP.rage),{channel:'808',co:{grid:1,note:2,ghost:3},coNote:4,lo:34,hi:52,h:180}),860,['Each note sits on the chord\'s root, mostly with the kick.','Pink note: the octave jump. With Porta on it slides there and back.','Ghost notes show the chords behind the 808 so you can match roots.'],'808 line from the Rage recipe (drawing)')}
+<h2>Make it heard on phones</h2>
+<p>Distortion adds harmonics: copies of the note at 2×, 3×, 4× its pitch. A 45 Hz 808 gains energy at 90, 135 and 180 Hz, which phone speakers can play. Your ear fills in the missing low note. Turn on <b>Phone speaker</b> in the 808 lab, then move Distortion from 0 to 60% and watch the green shape grow out of the red zone.</p>
+${fig(fastDistMock({co:{pre:1,thres:2,type:3,mix:4,post:5}}),420,['PRE: how hard you push into the distortion.','THRES: lower = more clipping.','TYPE A or B: two flavours; A is harsher, B rounder.','MIX: blend clean and distorted. 40–70% keeps the weight and adds the bite.','POST: bring the level back down after distorting.'],'Fruity Fast Dist on the 808 track (drawing)')}
+<p>Other good options: ${plug('blood')} (warmer), ${plug('soundgood')} (quick and loud), or the distortion in ${plug('khe')}. Put the distortion <b>before</b> any EQ on the 808 track.</p>
+<h2>Stop the kick and 808 fighting</h2>
+<p>Both live in the same low frequencies. When they hit at once they either add up and clip, or cancel and go thin. Three fixes, from simplest:</p>
+<ol class="steps"><li><b>Arrange it</b>: start 808 notes with the kick and make the kick short; or put the 808 between kicks.</li><li><b>Pick partners</b>: a kick with a high click and little boom works with a long 808; a big boomy kick works with a short 808.</li><li><b>Sidechain</b>: the 808 ducks for a moment every time the kick hits. Try it in the 808 lab and listen to the start of each kick.</li></ol>
+${fig(sidechainMock({co:{kick:1,arrow:2,side:3}}),620,['Select the <b>Kick</b> mixer track.','Right-click the routing arrow at the bottom of the <b>808</b> track.','Choose <b>Sidechain to this track</b>. The kick now feeds the 808 track without being heard on it.'],'Sending the kick to the 808 track as a sidechain (drawing)')}
+${fig(limiterMock({co:{mode:1,thres:2,ratio:3,att:4,rel:5,sc:6,gr:7}}),600,['On the 808 track, open Fruity Limiter and switch to <b>COMP</b>.','THRES: lower it until the 808 visibly dips on each kick.','RATIO: 4:1 to 10:1. Higher ducks harder.','ATT: as fast as it goes, so the duck starts with the kick.','REL: 80–150 ms. Too long and the 808 pumps; too short and it clicks.','SIDECHAIN: pick the Kick track number here. Without this, it ducks on itself.','The gain reduction graph should dip in time with the kick.'],'Fruity Limiter in COMP mode, keyed by the kick (drawing)')}
+<h2>Finish the 808 track</h2>
+<ul><li><b>Mono</b>: turn the 808 track's stereo separation fully to mono. Low end must be centred or it disappears on club systems and phones.</li><li><b>EQ</b>: a high-pass at about 25 Hz removes rumble nobody hears but the limiter reacts to. Do not boost the lows; turn the track up instead.</li><li><b>Level</b>: the 808 is often the loudest thing in the mix. Peak around −6 dB on its track and let the kick poke through on top.</li><li><b>Check</b>: put ${plug('wavecandy')} or ${plug('span')} on the master and look for one clean low bump, not two.</li></ul>
+<div class="tablewrap"><table><thead><tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr></thead><tbody>
+<tr><td>Low end sounds muddy</td><td>808 out of tune with the chords</td><td>Set the root note; check against a piano</td></tr>
+<tr><td>808 disappears on phones</td><td>Pure sub, no harmonics</td><td>Add distortion, 40–70% mix</td></tr>
+<tr><td>Kick vanishes when the 808 plays</td><td>Both fighting at 40–80 Hz</td><td>Sidechain, a clickier kick, or a shorter 808</td></tr>
+<tr><td>Clicks at note starts</td><td>Sample starts mid-wave, or very short attack</td><td>Small fade-in on the sample, or a 1–2 ms attack</td></tr>
+<tr><td>Notes overlap into a drone</td><td>Mono off</td><td>Turn on Mono, set Max to 1</td></tr>
+<tr><td>Master limiter pumping</td><td>Too much sub rumble</td><td>High-pass the 808 at 25 Hz, lower its track</td></tr>
+</tbody></table></div>`},
 
 {id:'melody',mod:'Building the beat',title:()=>'Melodies, chords and sound choice',min:40,body:()=>{const lead=pick(['vital','sytrus','harmor','sawer','3xosc']);const keys=pick(['labs','decent','flex','flkeys']);return `
 <h2>Choose sounds first</h2><p>Best lead option for you: <b>${lead.p.n}</b>${lead.owned?'':' (free download)'}. Keys and pianos: <b>${keys.p.n}</b>${keys.owned?'':' (free download)'}. FLEX is the shortcut to good presets: browse by category, preview, and stop when something makes you want to play.</p>
@@ -525,19 +645,48 @@ ${fig(playlist({co:{ruler:1,marker:2,track:3,pattern:4,dropout:5}}),860,['Bar nu
 <ol class="steps"><li>Make patterns: <i>Melody</i>, <i>Drums</i>, <i>Drums B</i>, <i>808 A</i>, <i>808 B</i>, <i>FX</i>.</li><li>Paint them in like the drawing.</li><li>Transitions: reversed crash into the hook, a riser, a filter sweep (automate ${plug('loveph')}), or ${has('grossbeat')?plug('grossbeat')+' tape-stop presets.':'a tape stop with '+plug('grossbeat')+' (Signature) or by automating pitch.'}</li></ol>
 ${tip('Keep it moving','Change something every 4 or 8 bars: a hat pattern, an 808 variation, a counter-melody, a fill.')}`},
 
-{id:'mix',mod:'Finishing',title:()=>'Mix it so it slaps',min:40,body:()=>`
-${fig(mixer({co:{strip:1,meter:2,fader:3,fx:4,send:5,master:6}}),860,['Mixer insert: each sound on its own track (from '+kbd(mod()+'+L')+' in the Channel Rack). Click one to select it.','Meters: green is fine; red at the top means too loud.','Fader: the volume. Balance with faders before any plugin.','Effect slots for the selected insert: EQ → distortion → limiter, top to bottom.','Route arrow: right-click to send a track to the Reverb insert, or to sidechain.','Master: everything ends here. Limiter and loudness meter go last.'],'Mixer (drawing). Press play on the transport bar and the meters move.')}
-<ol class="steps">
-<li><b>Gain staging.</b> Master peaks around −6 dB before master plugins. Most problems are volume problems.</li>
-<li><b>Order:</b> kick and 808 first, then snare/clap, then the main melody, then hats and the rest.</li>
-<li><b>EQ</b> with ${plug('peq2')}: low-cut melodies, hats and FX at 100–200 Hz. Cut harshness at 2–5 kHz on bright leads. ${plug('nova')} does it only when it gets harsh.</li>
-<li><b>Compression:</b> a little ${plug('comp')} on a drum bus.</li>
-<li><b>Space:</b> ${plug('supermassive')} or ${plug('reeverb')} on the Reverb insert; send melodies to it.</li>
-<li><b>Width:</b> kick, 808, snare centred. Widen chords with ${plug('stereo')} or chorus.</li>
-<li><b>Master:</b> ${plug('limiter')} (or ${plug('maximus')}) last. Raise gain until it is loud but the 808 does not crackle.</li>
-<li><b>Loudness:</b> ${plug('youlean')} last. Rap/trap usually −9 to −6 LUFS; R&B −11 to −8.</li></ol>
-${warn('Clipping','A red meter means that track is too loud. Turn its fader or plugin output down instead of fixing it at the master.')}
-<h2>Check on other speakers</h2><p>Phone speaker, earbuds, car. 808 vanishes on the phone? More distortion on it. Booms in the car? Turn it down or cut around 40–60 Hz.</p>`},
+{id:'mix',mod:'Finishing',title:()=>'Mixing in depth',min:70,body:()=>`
+<p>Mixing is making every part audible at once. Most of a good mix is levels and cuts; plugins only finish the job. Work through this page in order, in the mix lab first, then in FL.</p>
+${mixLab()}
+<h2>1. Route everything</h2>
+<p>Select all channels in the Channel Rack and press ${kbd(mod()+'+L')}: each sound gets its own mixer track. Name and colour them. Then route all drums to one <b>drum bus</b> track (select the drum tracks, right-click the bus's routing arrow → <b>Route to this track only</b>) so you can process and turn them up together.</p>
+${fig(mixer({co:{strip:1,meter:2,fader:3,fx:4,send:5,master:6}}),860,['Each sound on its own mixer track.','Meters: green is fine; red at the top means that track is too loud.','Fader: the level. Do most of the mix here.','Effect slots run top to bottom: EQ, then compression, then saturation, then anything else.','Routing arrows: send a track to a bus or the reverb track.','Master: everything ends here.'],'Mixer (drawing). Meters move with the preview.')}
+<h2>2. Levels first, and leave headroom</h2>
+<ol class="steps"><li>Pull every fader down. Bring up the kick to around −10 dB on its meter.</li><li>Bring in the 808 until kick and 808 feel like one hit, then the snare, then the main melody, then everything else.</li><li>The master should peak around −6 dB before any master plugins. That space is headroom for the limiter.</li><li>In the mix lab, load the <b>rough mix</b>: everything at full volume, nothing cut. Hear how the hats and chords bury the 808. Pull the hats and chords down first.</li></ol>
+<h2>3. EQ: cut space, then shape</h2>
+<p>Each sound gets a range of frequencies to itself. Cut what a sound does not need before boosting anything.</p>
+${fig(peq2Mock({track:'Chords',co:{graph:1,band:2,type:3,out:4}}),660,['The curve. Bands are the numbered dots: drag them.','Band 1 set as a high-pass: removes everything below about 150 Hz from the chords, so the 808 owns it.','Band types: high-pass, low shelf, peak, high shelf, low-pass. Pick per band.','Output: keep the level the same before and after so you judge the change, not the volume.'],'Fruity Parametric EQ 2 on the chords (drawing): low cut at 150 Hz, a small dip at 320 Hz, a small lift at 3 kHz')}
+<div class="tablewrap"><table><thead><tr><th>Sound</th><th>Low cut</th><th>Cut if muddy or harsh</th><th>Lift for character</th></tr></thead><tbody>
+<tr><td>Kick</td><td>Around 30 Hz</td><td>250–400 Hz (boxy)</td><td>50–80 Hz thump, 2–5 kHz click</td></tr>
+<tr><td>808</td><td>Around 25 Hz</td><td>200–400 Hz if distortion gets messy</td><td>Use distortion, not EQ boosts</td></tr>
+<tr><td>Snare, clap</td><td>100–150 Hz</td><td>400–800 Hz (honky)</td><td>200 Hz body, 2–5 kHz crack</td></tr>
+<tr><td>Hats, percs</td><td>300–500 Hz</td><td>3–5 kHz (harsh)</td><td>8–12 kHz air</td></tr>
+<tr><td>Chords, pads</td><td>150–250 Hz</td><td>250–500 Hz (mud)</td><td>2–4 kHz presence</td></tr>
+<tr><td>Lead, bells</td><td>200–300 Hz</td><td>2–4 kHz if it pokes too hard</td><td>4–6 kHz shine</td></tr>
+<tr><td>Space for a vocal</td><td colspan="3">Keep 1–4 kHz calm in everything else, so a rapper or singer sits on top</td></tr>
+</tbody></table></div>
+<p>In the mix lab, turn the low cuts on one by one with the 808 playing and watch the spectrum: the low area clears and the 808 gets louder without touching its fader.</p>
+<h2>4. Compression: control and glue</h2>
+<div class="tablewrap"><table><thead><tr><th>Control</th><th>What it does</th><th>Drum bus start</th></tr></thead><tbody>
+<tr><td>Threshold</td><td>Level where squashing starts</td><td>Lower until it reduces 2–4 dB on hits</td></tr>
+<tr><td>Ratio</td><td>How hard it squashes above the threshold</td><td>2:1 to 4:1</td></tr>
+<tr><td>Attack</td><td>How fast it grabs a hit</td><td>10–30 ms: lets the punch through first</td></tr>
+<tr><td>Release</td><td>How fast it lets go</td><td>Time it to breathe with the beat (60–150 ms)</td></tr>
+</tbody></table></div>
+<p>Use ${plug('comp')} or ${plug('limiter')} in COMP mode on the drum bus. If the drums lose their snap, the attack is too fast. For melodies, ${plug('ott')} is a popular shortcut for bright, upfront synths; use it at 20–40% depth.</p>
+<h2>5. Space: reverb and delay on sends</h2>
+<p>Make one <b>Reverb</b> track and one <b>Delay</b> track, then send sounds to them with the send knobs, rather than loading a reverb on every track. Everything then sits in the same room, and you save CPU. Keep the kick and 808 dry.</p>
+${delayTable(cur.bpm)}
+<p>The table uses the current beat's tempo (${cur.bpm} BPM). Fruity Delay 3 syncs to tempo on its own; use these numbers for reverb pre-delay (a 1/16 or 1/32 keeps the vocal clear) and decay (about a bar, so it clears in time). In the mix lab, raise the chords' and melody's reverb sends to about 0.2–0.3 and hear them sit behind the drums.</p>
+<h2>6. Width</h2>
+<ul><li>Centre: kick, 808, snare, main vocal and the main hook.</li><li>Wide: pads, chords, background vocals, FX. Use ${plug('stereo')} or a chorus.</li><li>Check in mono now and then (Wave Candy or a mono button on the master): if a sound vanishes, it is too wide.</li></ul>
+<h2>7. The master: loud enough, not crushed</h2>
+${fig(meterMock({co:{int:1,short:2,tp:3,hist:4}}),600,['Integrated loudness over the whole song. Rap and trap beats usually land around −9 to −6 LUFS; R&B a little quieter, −11 to −8.','Short-term loudness: watch it on the hook.','True peak: keep it at or below −1 dB so it does not distort after conversion to MP3 or streaming.','Loudness over time: the hook should be the loudest part.'],'Loudness meter on the master (drawing)')}
+<ol class="steps"><li>Last on the master: ${plug('limiter')} (or ${plug('maximus')}). Set its ceiling to −1 dB.</li><li>Raise its gain until the meter reaches your target. Stop when the 808 starts to crackle or the kick loses its punch.</li><li>Streaming services turn loud songs down to around −14 LUFS, so pushing past about −7 LUFS mostly costs punch.</li><li>In the mix lab, switch the <b>Master limiter</b> off and on and watch the level meter.</li></ol>
+<h2>8. Check like an engineer</h2>
+<ul><li><b>Reference</b>: drop a song you like into the Playlist on a muted track and A/B at the same volume.</li><li><b>Phone check</b>: switch on Phone speaker in the labs, then check on your real phone. If the 808 vanishes, add distortion.</li><li><b>Fresh ears</b>: mix at a low volume, take breaks, and finish the next day.</li><li><b>Export a test</b> and listen in the car.</li></ul>
+${warn('Clipping','A red meter on a track means that track is too loud. Fix it with its fader or plugin output, not with the master.')}`},
+
 
 {id:'export',mod:'Finishing',title:()=>'Export, tag and sell',min:20,body:()=>`
 <p>Switch to SONG mode and press ${kbd(mod()+'+R')}.</p>
@@ -799,7 +948,7 @@ function viewLesson(id){const l=LMAP[id];if(!l)return viewHome();const i=LESSONS
 <div class="lessonnav"><div>${prev?`<a class="btn" href="#lesson-${prev.id}">Back: ${prev.title()}</a>`:''}</div><div class="row"><button class="btn" id="doneBtn">${done[id]?'Done ✓':'Mark as done'}</button>${next?`<a class="btn primary" href="#lesson-${next.id}">Next: ${next.title()}</a>`:`<a class="btn primary" href="#beats">Make a beat</a>`}</div></div>`);
  $('#doneBtn').onclick=()=>{done[id]=!done[id];store.set('done',done);renderNav();$('#doneBtn').textContent=done[id]?'Done ✓':'Mark as done';if(done[id])toast('Lesson marked done')};
  const checks=store.get('checks',{});$$('.check input').forEach(c=>{c.checked=!!checks[c.id];c.addEventListener('change',()=>{checks[c.id]=c.checked;store.set('checks',checks)})});
- const mt=$('#midiTest');if(mt)mt.onclick=webMidi;bindChop();
+ const mt=$('#midiTest');if(mt)mt.onclick=webMidi;bindChop();bindLabs();
  const sim=$('.sim');if(sim){$$('[data-win]',sim).forEach(b=>b.addEventListener('click',()=>simShow(sim,b.dataset.win)));simShow(sim,'Channel rack')}}
 
 /* ================= breakdown lessons: practice beats (original material, not transcriptions) ================= */
