@@ -78,6 +78,7 @@
 .qk.hit{background:#9be6a8!important;color:#0b2a12!important}
 .qk.hit small{color:#0b2a12}
 
+.lbstep{scroll-margin-top:64px}
 /* labs */
 .lab{border:1px solid var(--border);border-radius:var(--radius-card);padding:16px 18px;margin:22px 0;background:var(--surface)}
 .lab-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:12px}
