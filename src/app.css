@@ -79,6 +79,13 @@
 .qk.hit small{color:#0b2a12}
 
 .lbstep{scroll-margin-top:64px}
+.anadrop{display:flex;flex-direction:column;gap:4px;align-items:flex-start;border:1.5px dashed var(--control);border-radius:var(--radius-card);padding:22px 20px;margin-top:20px;cursor:pointer;transition:border-color .15s,background .15s}
+.anadrop:hover,.anadrop.over{border-color:var(--hue);background:var(--hue-soft)}
+.anadrop b{font-size:16px}
+.prog-line{height:4px;border-radius:2px;background:var(--active);overflow:hidden}
+.prog-line i{display:block;height:100%;width:0;background:var(--hue);transition:width .3s}
+.inp{height:32px;width:96px;border:1px solid var(--control);border-radius:var(--radius-control);padding:0 10px;font:500 14px var(--font);color:var(--text);background:var(--surface)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 /* labs */
 .lab{border:1px solid var(--border);border-radius:var(--radius-card);padding:16px 18px;margin:22px 0;background:var(--surface)}
 .lab-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:12px}
