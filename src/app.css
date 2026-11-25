@@ -1,0 +1,140 @@
+/* ---------- hardware drawings (real objects, drawn) ---------- */
+.hw{width:1060px;background:#17181b;border-radius:14px;padding:16px 18px 14px;font-family:var(--ui);color:#c9ced5;user-select:none;-webkit-user-select:none;touch-action:none;position:relative;box-shadow:inset 0 0 0 1px #2a2c31}
+.hw.trim{box-shadow:inset 0 0 0 1px #2a2c31,inset 0 -3px 0 #b3141b}
+.hw-top{display:flex;gap:16px;align-items:stretch}
+.hw-sec{display:flex;flex-direction:column;gap:8px;padding:6px 12px 6px 0;border-right:1px solid #3a1416}
+.hw.trim .hw-sec{border-right-color:#5c1216}
+.hw:not(.trim) .hw-sec{border-right-color:#2c2e33}
+.hw-sec:last-child{border-right:0;padding-right:0}
+.hw-name{font:700 15px var(--font);color:#f1f2f4;letter-spacing:-.01em;line-height:1}
+.hw-name small{display:block;font:500 11px var(--ui);color:#7f8690;letter-spacing:.06em;margin-top:3px}
+.hw-lbl{font:600 11px var(--ui);color:#9aa1ab;text-transform:uppercase;letter-spacing:.04em;line-height:1.1;text-align:center}
+.hw-sh{color:#ff7a7f}
+/* wheels / joystick / strips */
+.hw-wheels{display:flex;gap:10px}
+.hw-wheel{width:30px;height:86px;border-radius:6px;background:#0c0d0f;box-shadow:inset 0 0 0 1px #33363c;position:relative;overflow:hidden;cursor:ns-resize}
+.hw-wheel i{position:absolute;left:4px;right:4px;top:8px;bottom:8px;border-radius:12px;background:repeating-linear-gradient(0deg,#2d3035 0 3px,#3b3f45 3px 5px);transform:translateY(var(--wy,0px));transition:transform .18s}
+.hw-wheel b{position:absolute;left:4px;right:4px;top:50%;height:2px;background:#e0464c;transform:translateY(var(--wy,0px));transition:transform .18s}
+.hw-joy{width:64px;height:64px;border-radius:50%;background:#0c0d0f;box-shadow:inset 0 0 0 1px #33363c;display:grid;place-items:center;cursor:grab}
+.hw-joy b{width:28px;height:28px;border-radius:50%;background:#3b3f45;box-shadow:inset 0 2px 0 #4d525a;transform:translate(var(--jx,0px),var(--jy,0px));transition:transform .15s}
+.hw-strips{display:flex;gap:8px}
+.hw-strip{width:16px;height:86px;border-radius:8px;background:#0c0d0f;box-shadow:inset 0 0 0 1px #33363c;position:relative;cursor:ns-resize}
+.hw-strip i{position:absolute;left:3px;right:3px;height:10px;border-radius:5px;background:#5fd0ff;top:calc(50% - 5px + var(--wy,0px));opacity:.85;transition:top .18s}
+/* buttons */
+.hw-btns{display:grid;gap:5px}
+.hw-btn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.hw-btn span{display:grid;place-items:center;min-width:56px;height:22px;padding:0 6px;border-radius:4px;background:#26282d;box-shadow:inset 0 -2px 0 #0e0f11,inset 0 0 0 1px #3a3d43;font:700 11px var(--ui);color:#d9dde2;text-transform:uppercase;letter-spacing:.03em;transition:background .1s}
+.hw-btn.on span{background:#c2262d;color:#fff}
+.hw-btn.on.grn span{background:#3cbf62;color:#05210d}
+.hw-btn:active span{transform:translateY(1px)}
+.hw-btn em{font:600 11px var(--ui);font-style:normal;color:#ff7a7f;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+/* pads */
+.hw-pads{display:grid;gap:8px}
+.hw-pad{width:76px;height:66px;border-radius:6px;background:#202226;box-shadow:inset 0 0 0 1px #34373d,0 3px 0 var(--glow,#333);cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;padding:5px 6px;transition:background .07s,box-shadow .07s}
+.hw-pad .pn{font:700 11px var(--ui);color:#8d949e}
+.hw-pad .ps{font:600 11px var(--ui);color:#ff8a8e;text-transform:uppercase;letter-spacing:.02em;line-height:1.05}
+.hw-pad .pl{font:600 11px var(--ui);color:#a9b0b9;text-transform:uppercase}
+.hw-pad.lit{background:var(--glow,#ff9a3c);box-shadow:inset 0 0 0 1px var(--glow),0 0 18px -2px var(--glow)}
+.hw-pad.lit .pn,.hw-pad.lit .pl,.hw-pad.lit .ps{color:#111}
+.p16 .hw-pad{width:44px;height:44px}
+/* screen + encoder */
+.hw-screen{width:132px;height:62px;border-radius:4px;background:#05070a;box-shadow:inset 0 0 0 1px #2c3036;padding:6px 8px;font:500 11px var(--font);color:#e9edf1;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.hw-screen .hd{background:#1f6fb0;color:#fff;font-weight:600;padding:0 4px;border-radius:2px;align-self:flex-start}
+.hw-screen b{font-size:13px;font-weight:600}
+.hw-screen.oled{color:#cfe6ff;background:#000}
+.hw-screen.oled .hd{background:none;color:#cfe6ff;padding:0}
+.hw-enc{width:44px;height:44px;border-radius:50%;background:#101114;box-shadow:0 0 0 3px #2a1b1c,inset 0 0 0 1px #3a3d43;position:relative}
+.hw.trim .hw-enc{box-shadow:0 0 0 2px #b3141b,inset 0 0 0 1px #3a3d43}
+/* knobs + faders */
+.hw-knobs{display:grid;gap:10px 6px}
+.hw-kn{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:ns-resize;width:66px}
+.hw-kn i{width:36px;height:36px;border-radius:50%;background:#101114;box-shadow:inset 0 0 0 1px #3a3d43,0 0 0 2px #26282d;position:relative}
+.hw.trim .hw-kn i{box-shadow:inset 0 0 0 1px #3a3d43,0 0 0 2px #8e1015}
+.hw-kn i::after{content:"";position:absolute;left:50%;top:4px;width:3px;height:10px;margin-left:-1.5px;background:#f2f4f6;border-radius:2px;transform-origin:1.5px 14px;transform:rotate(var(--r,-120deg))}
+.hw-kn .kl{font:600 11px var(--ui);color:#9aa1ab;text-transform:uppercase;white-space:nowrap}
+.hw-kn .kl em{font-style:normal;color:#ff7a7f}
+.hw-faders{display:flex;gap:12px}
+.hw-fader{width:14px;height:86px;border-radius:3px;background:#0c0d0f;box-shadow:inset 0 0 0 1px #33363c;position:relative}
+.hw-fader b{position:absolute;left:-5px;right:-5px;height:12px;border-radius:2px;background:#d7dbe0;top:var(--y,40%)}
+/* keys */
+.hw-keys{position:relative;height:124px;margin-top:14px;border-radius:3px;overflow:hidden;background:#0a0b0d}
+.hw-keys .w{position:absolute;top:0;height:100%;background:#f3f4f6;border-right:1px solid #b9bec5;border-radius:0 0 4px 4px;cursor:pointer;transition:background .06s}
+.hw-keys .b{position:absolute;top:0;height:60%;background:#17181b;border-radius:0 0 3px 3px;z-index:2;cursor:pointer;box-shadow:inset 0 -4px 0 #2b2d32}
+.hw-keys .hit{background:#9be6a8!important}
+.hw-keys .b.hit{background:#2f9b48!important}
+.hw-keys .lbl{position:absolute;bottom:6px;left:0;right:0;text-align:center;font:600 11px var(--ui);color:#80868f;pointer-events:none}
+.hw-klabels{position:relative;height:30px;margin-top:8px}
+.hw-klabels span{position:absolute;font:600 11px var(--ui);color:#b5bbc3;text-transform:uppercase;white-space:nowrap;transform:translateX(-50%)}
+.hw-klabels span.sh{color:#ff7a7f}
+/* typing keyboard */
+.qw{width:760px;background:#e9ebee;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 1px #d5d8dc}
+.qw-r{display:flex;gap:6px}
+.qk{width:50px;height:50px;border-radius:7px;background:#f7f8f9;box-shadow:inset 0 -2px 0 #cfd2d6,inset 0 0 0 1px #d9dce0;font:600 15px var(--font);color:#9aa0a8;display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px}
+.qk small{font:500 11px var(--font);color:transparent}
+.qk.wk{background:#fff;color:#131416;cursor:pointer}
+.qk.wk small{color:#5d5f63}
+.qk.bk{background:#2a2c30;color:#fff;cursor:pointer;box-shadow:inset 0 -2px 0 #000}
+.qk.bk small{color:#c4c8ce}
+.qk.hit{background:#9be6a8!important;color:#0b2a12!important}
+.qk.hit small{color:#0b2a12}
+
+/* shared names used by older view templates */
+.eyebrow{font-size:13px;color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:var(--active);color:#353736;font-size:13px;text-decoration:none;white-space:nowrap}
+.chip b{font-weight:600;color:var(--text)}
+.chip input{accent-color:var(--text)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:16px 18px;margin-top:14px}
+.panel.sim-text{background:var(--raised);border:0}
+.tlabel{font-size:13px;color:var(--muted)}
+.pill.stock{background:var(--active);color:#353736}
+.pill.free{background:var(--positive-bg);color:#0e4a2c}
+.sim-area{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr);gap:16px;align-items:start;margin-top:12px}
+.sim-win{min-width:0}
+.lesson>h2:first-child{margin-top:24px}
+@media (max-width:900px){
+  .sim-area{grid-template-columns:1fr}
+  .frame{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+  .side{grid-row:auto;position:static;height:auto;padding:10px max(16px,env(safe-area-inset-right,0px)) 4px max(16px,env(safe-area-inset-left,0px))}
+  .side .brand{padding-bottom:8px}
+  .side nav{flex-direction:row;overflow-x:auto;gap:2px;padding-bottom:8px;scrollbar-width:none}
+  .side .grp,.prog{display:none}
+  .side a{white-space:nowrap}
+  .top{grid-column:1;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));height:52px}
+  .sheet{grid-column:1;margin:0;border-radius:14px 14px 0 0;border-bottom:0}
+  .content{--pad:18px;padding-top:22px}
+  .split{grid-template-columns:1fr}
+  .setrow{grid-template-columns:1fr;gap:10px}
+  .sound{grid-template-columns:1fr}
+  .readout.pos{display:none}
+}
+@media (max-width:460px){select.sel{max-width:150px}.readout{font-size:12.5px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.hw-klabels span:nth-child(odd){top:0}.hw-klabels span:nth-child(even){top:14px}
+</style>
+</head>
+<body>
+<div class="frame">
+  <aside class="side" aria-label="Course">
+    <a class="brand" href="#home" aria-label="Beat Tutor home">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#131416"/><rect x="6" y="9" width="5" height="14" rx="1" fill="#fff"/><rect x="13.5" y="9" width="5" height="14" rx="1" fill="#fff"/><rect x="21" y="9" width="5" height="14" rx="1" fill="#fff"/><rect x="9.5" y="9" width="3" height="8" fill="#c25f00"/><rect x="17" y="9" width="3" height="8" fill="#131416"/></svg>
+      <span><b>Beat Tutor</b><span>FL Studio with a MIDI keyboard</span></span>
+    </a>
+    <div class="prog"><span class="bar"><i id="progBar"></i></span><span id="progTxt" class="tnum"></span></div>
+    <nav id="nav"></nav>
+  </aside>
+  <header class="top" role="toolbar" aria-label="Preview player">
+    <div class="tp">
+      <button class="icbtn" id="tPlay" aria-label="Play preview"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 1.2v9.6L10.5 6z" fill="currentColor"/></svg></button>
+      <button class="icbtn" id="tStop" aria-label="Stop preview"><svg width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="10" rx="1.5" fill="currentColor"/></svg></button>
+      <label class="small muted" for="tBeat" style="margin-left:4px">Beat</label>
+      <select class="sel" id="tBeat"></select>
+      <span class="readout" id="tBpm"></span>
+      <span class="readout pos" id="tPos">Bar <b>1</b> · beat <b>1</b></span>
+    </div>
+    <span class="spacer"></span>
+  </header>
+  <main class="sheet"><div class="content" id="view"></div></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
