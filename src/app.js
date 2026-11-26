@@ -11,22 +11,22 @@ const KEYBOARDS={
   mpk4:{name:'Akai MPK Mini IV',short:'MPK Mini IV',
     summary:'25 velocity-sensitive mini keys, 8 RGB pads in two banks, 8 endless knobs, separate pitch and mod wheels, a colour screen with a push encoder, transport buttons, a sustain jack and 5-pin MIDI out.',
     pitch:'the <b>pitch wheel</b> and <b>mod wheel</b> on the left',oct:'<b>Oct −</b> / <b>Oct +</b> under the wheels',
-    padNote:'Load FPC and hit the pads: in Bank A they trigger FPC\'s first eight pads. If a pad is silent, press <b>Bank A/B</b> to switch back.',
+    padNote:'Load FPC and hit the pads. If a pad is silent or plays the wrong sound, press <b>Bank A/B</b> or check FPC\'s note layout.',
     sustain:'There is a 1/4" sustain pedal jack on the back.',
-    repeat:'Hold <b>Note Repeat</b> and a pad to roll it. The rate comes from the time division printed above the first eight keys (1/4 to 1/32T): hold <b>Shift</b> and press one of those keys. With the DAW port set up (below), the rolls follow FL\'s tempo.',
-    arp:'Press <b>Arp</b>, then hold <b>Shift</b> and press the keys labelled Up, Down, Excl, Incl, Order, Rand or Chord to pick the pattern, and Oct 1–4 for its range. <b>Latch</b> keeps it running after you let go.',
+    repeat:'Press <b>Note Repeat</b> to turn it on, then hold a pad to roll it. To change the rate, hold <b>Note Repeat</b> and press one of the time-division keys (1/4 to 1/32T, printed above the first eight keys). To lock rolls to FL\'s tempo, set Arp Config → Clock to External; then rolls only play while FL is playing.',
+    arp:'Press <b>Arp</b>. Hold <b>Arp</b> and press the labelled keys to set the rate (1/4 to 1/32T), the mode (Up to Chord) and the range (Oct 1–4); hold Arp and turn the knobs for the settings printed under them. <b>Latch</b> keeps it running after you let go.',
     hw:{model:'mpk4',trim:true,pitch:'wheels',pads:8,padCols:4,glow:['#ffd23f','#ff8a1f','#ff3b30','#ff4fd8','#b05bff','#3b5bff','#22d3ee','#3ee06a'],
       padLabels:['1','2','3','4','5','6','7','8'],padShift:['','Prog chng','CC#','Notes','Chords','Chords config','Scales','Scales config'],
       left:[['Oct −','Prog edit','down'],['Oct +','Save','up']],
       under:[['Arp','Config','arp'],['Latch','Full level','latch'],['Note repeat','Config','nr'],['Tap tempo','Metronome','tap'],['Bank A/B','','bank']],
       screen:{hd:'01 - Drums 1',l1:'Volume',l2:'-3.6 dB'},encoder:true,centre:[['−','',''],['+','',''],['Shift','','shift'],['Plugin/DAW','User presets','daw']],
       knobs:['Division','Swing','Mode','Oct','Latch','Sync','Gate','BPM'],knobsShift:true,
-      transport:[['Undo','Redo','undo'],['Loop','Global','loop'],['■ / ▶','Continue','play'],['●','Quantize','rec'],['Auto','Automation','auto']],
+      transport:[['Undo','Redo','undo'],['Loop','Global','loop'],['■ / ▶','Continue','play'],['●','Quantize','rec'],['Overdub','Automation','auto']],
       keys:25,keyLabels:MPK4_KEYS}},
   mpk3:{name:'Akai MPK Mini MK3',short:'MPK Mini MK3',
     summary:'25 mini keys, 8 pads in two banks, 8 endless knobs, a 4-way joystick for pitch and mod, an OLED screen, Arp, Note Repeat and Full Level.',
     pitch:'the 4-way <b>joystick</b> (left/right bends pitch, up is modulation)',oct:'<b>Oct −</b> / <b>Oct +</b>',
-    padNote:'Bank A pads send notes 36–43, the range FPC listens to.',sustain:'There is a sustain pedal jack.',
+    padNote:'Pads send notes FPC can play. If one is silent or plays the wrong sound, switch banks or check FPC\'s note layout.',sustain:'There is a sustain pedal jack.',
     repeat:'Hold <b>Note Repeat</b> and a pad. The arp\'s time division (1/4 to 1/32T) sets the roll speed.',
     arp:'Press <b>Arp</b>; hold <b>Arp</b> and press the labelled keys to pick the mode, division and octave range.',
     hw:{model:'mpk3',pitch:'joystick',pads:8,padCols:4,glow:Array(8).fill('#ff3b30'),padLabels:['1','2','3','4','5','6','7','8'],
@@ -34,19 +34,19 @@ const KEYBOARDS={
       under:[['Full level','','full'],['Note repeat','','nr'],['Bank A/B','','bank'],['CC','',''],['Prog change','','']],
       screen:{hd:'MPK mini',l1:'Prog 1',l2:''},oled:true,knobs:['K1','K2','K3','K4','K5','K6','K7','K8'],keys:25}},
   launchkey:{name:'Novation Launchkey Mini (MK3 / MK4)',short:'Launchkey Mini',
-    summary:'25 mini keys, 16 pads, 8 knobs (endless encoders and an OLED screen on the MK4), pitch and mod touch strips, Arp, scale and chord modes, transport buttons on the MK4.',
+    summary:'25 mini keys, 16 pads, pitch and mod touch strips, Arp and Fixed Chord, Play and Record buttons. MK3: 8 knobs, no screen. MK4: 8 endless encoders, an OLED screen, Scale and Chord Map.',
     pitch:'the <b>pitch and mod touch strips</b> on the left',oct:'the <b>Octave</b> up/down buttons',
-    padNote:'Switch the pads to Drum mode: they send notes from 36 up, the range FPC listens to.',sustain:'There is a sustain input.',
+    padNote:'Pads send notes FPC can play. If one is silent or plays the wrong sound, switch banks or check FPC\'s note layout.',sustain:'There is a sustain input.',
     repeat:'There is no Note Repeat button: hold one note with the Arp at a fast rate, or draw rolls in the piano roll.',
     arp:'Press <b>Arp</b>; hold <b>Shift</b> to change its rate and pattern.',
     hw:{model:'launchkey',pitch:'strips',pads:16,padCols:8,glow:['#22d3ee','#3ee06a','#ffd23f','#ff8a1f','#ff3b30','#ff4fd8','#b05bff','#3b5bff','#3b5bff','#b05bff','#ff4fd8','#ff3b30','#ff8a1f','#ffd23f','#3ee06a','#22d3ee'],
-      left:[['Shift','','shift'],['Oct −','','down'],['Oct +','','up']],under:[['Arp','','arp'],['Scale','',''],['Chord','',''],['▶','','play'],['●','','rec']],
-      screen:{hd:'Launchkey',l1:'Drum',l2:''},oled:true,knobs:['1','2','3','4','5','6','7','8'],knobRow:true,keys:25}},
+      left:[['Shift','','shift'],['Oct −','','down'],['Oct +','','up']],under:[['Arp','','arp'],['Fixed chord','',''],['▶','','play'],['●','','rec']],
+      screen:{hd:'MK4 only',l1:'Drum',l2:''},oled:true,knobs:['1','2','3','4','5','6','7','8'],knobRow:true,keys:25}},
   minilab:{name:'Arturia MiniLab 3',short:'MiniLab 3',
-    summary:'25 slim keys, 8 pads in two banks, 8 encoders, 4 faders, pitch and mod touch strips, a main encoder with a small screen, Arp, chord and scale modes.',
+    summary:'25 slim keys, 8 pads in two banks, 8 encoders, 4 faders, pitch and mod touch strips, a main encoder with a small screen, an arpeggiator and chord mode, and 5-pin MIDI out.',
     pitch:'the <b>pitch and mod touch strips</b>',oct:'<b>Oct −</b> / <b>Oct +</b>',
-    padNote:'Pads send notes from 36 up in the DAW preset, so they play FPC.',sustain:'There is a sustain input.',
-    repeat:'Use the Arp on one held pad, or draw rolls in the piano roll.',arp:'Press <b>Arp</b> (or Shift + Hold, depending on firmware) and set its rate with the main encoder.',
+    padNote:'Pads send notes FPC can play. If one is silent or plays the wrong sound, switch banks or check FPC\'s note layout.',sustain:'There is a sustain input.',
+    repeat:'Use the Arp on one held pad, or draw rolls in the piano roll.',arp:'Turn the arpeggiator on with its Shift + pad function (see Arturia\'s manual) and adjust it on the screen.',
     hw:{model:'minilab',pitch:'strips',pads:8,padCols:8,glow:Array(8).fill('#3b82f6'),left:[['Shift','','shift'],['Hold','',''],['Oct −','','down'],['Oct +','','up']],under:[],
       screen:{hd:'MiniLab 3',l1:'Prog 1',l2:''},oled:true,encoder:true,knobs:['1','2','3','4','5','6','7','8'],faders:4,keys:25}},
   big:{name:'Full-size keyboard (49 / 61 / 88)',short:'Full-size keys',
@@ -149,7 +149,7 @@ const RECIPES=[
  bass:'x......x..x...^.',timbre:'saw',arp:null,
  sounds:[['Lead / chords',['vital','sawer','harmor','sytrus','3xosc'],'Supersaw: 7+ unison voices, wide detune, octave layer. Then OTT and heavy distortion.'],['808',['sampler','kick'],'Long distorted 808, Mono + Porta for slides.'],['Drums',['fpc','sampler'],'Hard punchy kick, crisp snare, tight hats.'],['FX',['ott','fastdist','supermassive','reeverb','grossbeat'],'OTT on the lead, Fast Dist on 808, big reverb send, Gross Beat stutters.']],
  steps:['Set tempo to 160. Load your supersaw and play the 4 chords, one bar each. Hold them long; rage chords sustain.','Program the drums like the Channel Rack tab: kick sparse, snare on beat 3 only, hats in 8ths with a roll at the end.','Record the 808 on the chord roots with a jump up an octave at the end of the bar (Piano roll: 808 tab).','Distort the 808 hard, then low-cut the lead at 150 Hz so they do not fight.','Make the intro with a filtered lead only, then bring everything in on the hook (Playlist tab).'],
- midi:'Play the chords with your right hand and push the joystick up for vibrato on held notes. Link a knob to the lead\'s filter cutoff and ride it into the hook.',
+ midi:'Play the chords with your right hand and add vibrato on held notes with the mod control. Link a knob to the lead\'s filter cutoff and ride it into the hook.',
  tips:['Rage leads often play chord notes as a simple 2–3 note riff instead of block chords. Try both.','Use Gross Beat (or automate volume) for gated stutters on the lead.','Keep the kick sparse. The 808 carries the low end.']},
 {id:'pluggnb',name:'Pluggnb glow',lane:'Pluggnb',ref:'Bixby lane',bpm:150,key:'Db major',scale:[1,'Major'],swing:0.08,
  vibe:'Soft, glossy, emotional. Major 7th chords from R&B over plugg drums and a bouncy 808.',
@@ -187,7 +187,7 @@ const RECIPES=[
  steps:['Tempo 70 (or 140 in half-time). Play the 4 seventh chords on Rhodes, letting them ring with sustain.','Drums: kick on 1 and the "and" of 2, snare + finger snap on 2 and 4, swung hats.','Turn swing up to 25–35%.','Sub bass on roots, held long.','Reverse a chord (Sampler → Reverse) leading into each 4 bars.'],
  midi:'This is where a sustain pedal shines. Play chords loosely, then quantize only lightly.',
  tips:['Add the 9th on top of minor chords for instant R&B.','Leave the mids open; that is where the singer goes.']},
-{id:'rnbguitar',name:'Bedroom R&B',lane:'R&B',ref:'guitar R&B',bpm:92,key:'A minor',scale:[9,'Dorian (R&B minor)'],swing:0.18,
+{id:'rnbguitar',name:'Bedroom R&B',lane:'R&B',ref:'guitar R&B',bpm:92,key:'A minor',scale:[9,'Natural minor'],swing:0.18,
  vibe:'Intimate and modern. Jazzy guitar or keys on a ii–V–I, crisp drums, round bass.',
  chords:[['Dm9','D3 F3 A3 C4 E4'],['G13','F3 B3 E4'],['Cmaj9','E3 G3 B3 D4'],['Am9','C3 E3 G3 B3']],roots:['D','G','C','A'],
  drums:{Kick:'x.....x...x.....',Snare:'....x.......x...',Hat:'x.x.x.x.x.x.x.x.',Perc:'..x.......x....g'},
@@ -195,7 +195,7 @@ const RECIPES=[
  sounds:[['Guitar / keys',['ample','labs','decent','flex'],'Clean guitar strums or soft piano.'],['Bass',['boobass','sampler','3xosc'],'Warm finger-bass or sub.'],['Drums',['fpc','sampler'],'Tight kick, rim or snare, soft hats.'],['FX',['vchorus','reeverb','delay3'],'Chorus on guitar, short room reverb on drums.']],
  steps:['Tempo 92. Play the ii–V–I–vi chords. In FL, use Tools → Strum on them to sound strummed.','Drums with a rim instead of a snare for the verse.','Bass on roots with a passing note into each chord.','Add a soft pluck melody (Piano roll: melody tab).','Hook: switch rim to full snare and add a pad.'],
  midi:'Play chord tones one at a time (broken chords) instead of all at once. It sounds like fingerpicking.',
- tips:['Rootless voicings (skip the root, let the bass play it) sound pro.','Humanize: Tools → Randomize with small timing and velocity amounts.']}
+ tips:['G13, Cmaj9 and Am9 here are rootless voicings: the bass plays the root, the chord plays the colour notes.','Humanize: Tools → Randomize with small timing and velocity amounts.']}
 ];
 const RMAP=Object.fromEntries(RECIPES.map(r=>[r.id,r]));
 const rootMidi=(r,b)=>36+NN.indexOf(FLAT[r.roots[b]]||r.roots[b]);
@@ -419,12 +419,12 @@ function hwFig(){const k=K(),h=k.hw;
  add('oct',hasB('down'),m4?'Oct − / Oct +: move the keys up for melodies, down for 808s. With Shift they are Prog edit and Save.':'Octave buttons: move the keys up for melodies, down for 808s.');
  add('pads',h.pads,m4?'Pads 1–8 in two banks (Bank A/B). The red labels are Shift functions: Prog chng, CC#, Notes, Chords, Chords config, Scales, Scales config.':`${h.pads} pads for drums and samples. Tap them here.`);
  add('arp',hasB('arp'),m4?'Arp (Shift: Config). Latch keeps it running after you let go.':'Arp: turns held chords into patterns.');
- add('nr',hasB('nr'),'Note Repeat: hold it with a pad to roll hi-hats. Try it here: turn it on, then hold a pad.');
+ add('nr',hasB('nr'),'Note Repeat: press it to turn it on, then hold a pad to roll hi-hats. Try it here.');
  add('screen',!!h.screen,m4?'Screen and push encoder: the program, the last control you touched and its value.':'Screen: shows what you touched and its value.');
  add('daw',hasB('daw'),'Plugin/DAW: lit red means DAW mode, which FL needs for the transport buttons and the screen.');
- add('knobs',h.knobs.length,m4?'8 knobs. Their red Shift labels set the arp: Division, Swing, Mode, Oct, Latch, Sync, Gate, BPM. Here knob 1 is volume and knob 2 filter cutoff for the preview.':'Knobs: link them to anything in FL. Here knob 1 is volume and knob 2 filter cutoff for the preview.');
- add('transport',hasB('play'),m4?'Transport: Undo (Redo), Loop (Global), Stop/Play (Continue), Record (Quantize), Automation. ▶ plays the beat here.':'Transport: start, stop and record FL from the keyboard. ▶ plays the beat here.');
- add('keys',1,m4?'25 keys. The labels above them are Shift functions: arp rate (1/4 to 1/32T), arp mode (Up to Chord), arp octaves 1–4, then Swing, Pattern, Edit, Mutate, Freeze, Sync.':`${h.keys} keys. Tap them to play the current sound.`);
+ add('knobs',h.knobs.length,m4?'8 endless knobs. Hold Arp and turn them to set the arp parameters printed under them (rate, swing, mode, octaves, latch, clock, gate, tempo). Here knob 1 is volume and knob 2 filter cutoff for the preview.':'Knobs: link them to anything in FL. Here knob 1 is volume and knob 2 filter cutoff for the preview.');
+ add('transport',hasB('play'),m4?'Transport: Undo (Redo), Loop (Global), Stop/Play (Continue), Record (Quantize), Overdub (Automation). In FL, Shift + Stop/Play switches Pattern/Song. ▶ plays the beat here.':'Transport: start, stop and record FL from the keyboard. ▶ plays the beat here.');
+ add('keys',1,m4?'25 keys. The labels above them are arp functions: hold Arp (or Note Repeat, for the rate) and press a key. Rate 1/4 to 1/32T, mode Up to Chord, octaves 1–4, then Swing, Pattern, Edit, Mutate, Freeze, Sync.':`${h.keys} keys. Tap them to play the current sound.`);
  const c={};items.forEach(([key],i)=>c[key]=i+1);
  return fig(hardware({co:c}),1060,items.map(x=>x[1]),k.short+' (drawing). Everything on it is playable.')}
 function controller(o={}){return midiMode()?fit(hardware(o),1060):fit(qwerty(o),760)}
@@ -660,10 +660,10 @@ ${tip('Bluetooth headphones','Bluetooth adds delay, so playing keys feels late. 
 ${hwFig()}
 <h2>Connect it</h2>
 ${k.hw.model==='mpk4'?`<ol class="steps"><li>Update to <b>FL Studio 2024 or newer</b>. Akai's guide says earlier versions do not support the Mini IV.</li><li>Install Akai's <b>MPK mini IV FL Studio script</b> from the <b>inMusic Software Center</b> (Hardware tab), with FL closed.</li><li>Plug the keyboard in with USB-C, open FL and go to <b>Options → MIDI settings</b> (${kbd('F10')}, MIDI tab). The Mini IV appears twice: a MIDI port and a DAW port.</li></ol>
-${fig(dlgMidi({mpk4:true,co:{input:1,enable:2,type:3,dawrow:4,daw:5,sync:6}}),600,['Select the <b>MIDI</b> port in the Input list.','Click <b>Enable</b>.','Set its Controller type to <b>AKAI MPK Mini IV MIDI</b> and give it a port number (1). Its Output entry uses the same number.','Select the <b>DAW</b> port in the Input list and Enable it.','Set its Controller type to <b>AKAI MPK Mini IV DAW</b> with a different port number (2), and the same number on its Output entry.','Leave Send master sync on for the DAW output so the arp and Note Repeat follow FL\'s tempo.'],'Settings → MIDI for the MPK Mini IV (drawing). Older guide versions call the DAW port MIDIIN2 / MIDIOUT2.')}
-<ol class="steps" start="4"><li>On the keyboard, press <b>Plugin/DAW</b> until it lights <b>red</b> (DAW mode).</li><li>Unplug and replug the keyboard, then reopen FL. The transport buttons now start, stop and record FL, and the screen follows what you touch.</li><li>Add <b>FLEX</b> to the Channel Rack (<b>+</b>), click it so it is selected, and play a key. FL plays whatever channel is selected.</li></ol>`
+${fig(dlgMidi({mpk4:true,co:{input:1,enable:2,type:3,dawrow:4,daw:5,sync:6}}),600,['Select the <b>MIDI</b> port in the Input list.','Click <b>Enable</b>.','Set its Controller type to <b>AKAI MPK Mini IV MIDI</b> and give it a port number (1). Its Output entry uses the same number.','Select the <b>DAW</b> port in the Input list and Enable it.','Set its Controller type to <b>AKAI MPK Mini IV DAW</b> with a different port number (2), and the same number on its Output entry.','To lock the arp and Note Repeat to FL\'s tempo: set Arp Config → Clock to External on the keyboard and turn on Send master sync for its output here.'],'Settings → MIDI for the MPK Mini IV (drawing). Older guide versions call the DAW port MIDIIN2 / MIDIOUT2.')}
+<ol class="steps" start="4"><li>On the keyboard, press <b>Plugin/DAW</b> until it lights <b>red</b> (DAW mode).</li><li>The transport buttons now start, stop and record FL, and the screen follows what you touch. If they do nothing: check Plugin/DAW is lit red; on a Mac, click <b>Update MIDI scripts</b> then <b>Refresh device list</b> in MIDI settings.</li><li>Add <b>FLEX</b> to the Channel Rack (<b>+</b>), click it so it is selected, and play a key. FL plays whatever channel is selected.</li></ol>`
 :`<ol class="steps"><li>Plug it in with USB. It is class-compliant, so no driver is needed.</li><li>In FL open <b>Options → MIDI settings</b> (${kbd('F10')}, then the MIDI tab).</li></ol>
-${fig(dlgMidi({co:{input:1,enable:2,type:3,rescan:4,sync:5}}),560,[`Input list: click <b>${k.short}</b>.`,'Click <b>Enable</b>.','Controller type: pick your model if FL lists it (some makers publish an FL script), otherwise <b>(generic controller)</b>. Notes, pads and pitch work either way.','Not listed? Click <b>Rescan devices</b>, or replug the keyboard and restart FL.','Output: pick the keyboard, set a port number, and tick <b>Send master sync</b> so its arp follows FL\'s tempo.'],'Settings → MIDI (drawing)')}
+${fig(dlgMidi({co:{input:1,enable:2,type:3,rescan:4,sync:5}}),560,[`Input list: click <b>${k.short}</b>.`,'Click <b>Enable</b>.','Controller type: '+({launchkey:'Launchkey Mini MK3 has built-in FL support (FL 20.9.2 and newer). The MK4 works with FL 21+ after a firmware update in Novation Components.',minilab:'pick <b>Arturia MiniLab 3</b> (FL 21 and newer) and select the DAW program on the keyboard.'}[prof.kb]||'pick your model if FL lists it, otherwise <b>(generic controller)</b>.')+' Notes, pads and pitch work either way.','Not listed? Click <b>Rescan devices</b>, or replug the keyboard and restart FL.','Output: pick the keyboard, set a port number, and tick <b>Send master sync</b> so its arp follows FL\'s tempo.'],'Settings → MIDI (drawing)')}
 <ol class="steps" start="3"><li>Add <b>FLEX</b> to the Channel Rack (<b>+</b> button), click it so it is selected, and play a key. FL plays whatever channel is selected.</li></ol>`}
 ${warn('No sound?','Check the channel is selected (its name is highlighted), the Input row is enabled, and no other app (like the maker\'s editor) is holding the keyboard. Unplug, close FL, plug in, reopen.')}
 <h2>Pads → drums with FPC</h2>
@@ -709,7 +709,7 @@ ${midiMode()?tip('On your '+K().short,K().repeat):''}
 ${tip('Layering','A clap layered over the snare, both at the same time, gives a fuller backbeat. EQ each so one gives crack and one gives body.')}`},
 
 {id:'808',mod:'Building the beat',title:()=>'808s: tune, glide, distort, fit',min:50,body:()=>`
-<p>The 808 is a long, low sine-like tone with a punchy start. Its main note, the <b>fundamental</b>, sits around 30–60 Hz. That is the part you feel in a car, and the part a phone speaker cannot play at all. Getting an 808 right means four things: it is <b>in tune</b>, it <b>moves</b> with the song, it is <b>heard on small speakers</b>, and it <b>does not fight the kick</b>.</p>
+<p>The 808 is a long, low sine-like tone with a punchy start. Its main note, the <b>fundamental</b>, usually sits around 30–100 Hz. That is the part you feel in a car, and the part a phone speaker barely plays. Getting an 808 right means four things: it is <b>in tune</b>, it <b>moves</b> with the song, it is <b>heard on small speakers</b>, and it <b>does not fight the kick</b>.</p>
 ${lab808()}
 <h2>Pick the right 808</h2>
 <div class="tablewrap"><table><thead><tr><th>Style</th><th>808 to choose</th><th>Why</th></tr></thead><tbody>
@@ -726,16 +726,16 @@ ${fig(chSettings({co:{func:1,mono:2,porta:3,slide:4,root:5,ins:6}}),480,['Open t
 <ul><li><b>Octave jump</b>: the root, then the same note an octave up on the last 8th of the bar, sliding back down.</li><li><b>Slide into the downbeat</b>: a short note a few semitones below the next chord's root, overlapping into it.</li><li><b>Dive</b>: the last note of a phrase bent down an octave with ${K().pitch}, recorded as automation.</li></ul>
 ${fig(pianoRoll(bassNotes(RMAP.rage),{channel:'808',co:{grid:1,note:2,ghost:3},coNote:4,lo:34,hi:52,h:180}),860,['Each note sits on the chord\'s root, mostly with the kick.','Pink note: the octave jump. With Porta on it slides there and back.','Turn on ghost channels (View → Helpers, Alt+V) to see the chords behind the 808 while you write.'],'808 line from the Rage recipe (drawing)')}
 <h2>Make it heard on phones</h2>
-<p>Distortion adds harmonics: copies of the note at 2×, 3×, 4× its pitch. A 45 Hz 808 gains energy at 90, 135 and 180 Hz, which phone speakers can play. Your ear fills in the missing low note. Turn on <b>Phone speaker</b> in the 808 lab, then move Distortion from 0 to 60% and watch the green shape grow out of the red zone.</p>
+<p>Distortion adds harmonics: new energy at whole-number multiples of the note (2×, 3×, 4× …; hard clipping mostly adds the odd ones). A 45 Hz 808 gains energy at 135 Hz and above, which phone speakers can play. Your ear fills in the missing low note. Turn on <b>Phone speaker</b> in the 808 lab, then move Distortion from 0 to 60% and watch the green shape grow out of the red zone.</p>
 ${fig(fastDistMock({co:{pre:1,thres:2,type:3,mix:4,post:5}}),420,['PRE: how hard you push into the distortion.','THRES: lower = more clipping.','TYPE A or B: two distortion shapes. Pick by ear.','MIX: blend clean and distorted. 40–70% keeps the weight and adds the bite.','POST: bring the level back down after distorting.'],'Fruity Fast Dist on the 808 track (drawing)')}
-<p>Other good options: ${plug('blood')} (warmer), ${plug('soundgood')} (quick and loud), or the distortion in ${plug('khe')}. Put the distortion <b>before</b> any EQ on the 808 track.</p>
+<p>Other good options: ${plug('blood')} (warmer), ${plug('soundgood')} (quick and loud), or the distortion in ${plug('khe')}. On the 808, many producers distort first and EQ after, so the EQ can tidy what the distortion adds.</p>
 <h2>Stop the kick and 808 fighting</h2>
 <p>Both live in the same low frequencies. When they hit at once they either add up and clip, or cancel and go thin. Three fixes, from simplest:</p>
 <ol class="steps"><li><b>Arrange it</b>: start 808 notes with the kick and make the kick short; or put the 808 between kicks.</li><li><b>Pick partners</b>: a kick with a high click and little boom works with a long 808; a big boomy kick works with a short 808.</li><li><b>Sidechain</b>: the 808 ducks for a moment every time the kick hits. Try it in the 808 lab and listen to the start of each kick.</li></ol>
 ${fig(sidechainMock({co:{kick:1,arrow:2,side:3}}),620,['Select the <b>Kick</b> mixer track.','Right-click the routing arrow at the bottom of the <b>808</b> track.','Choose <b>Sidechain to this track</b>. The kick now feeds the 808 track without being heard on it.'],'Sending the kick to the 808 track as a sidechain (drawing)')}
 ${fig(limiterMock({co:{mode:1,thres:2,ratio:3,att:4,rel:5,sc:6,gr:7}}),600,['On the 808 track, open Fruity Limiter and switch to <b>COMP</b>.','THRES: lower it until the 808 visibly dips on each kick.','RATIO: 4:1 to 10:1. Higher ducks harder.','ATT: as fast as it goes, so the duck starts with the kick.','REL: 80–150 ms. Too long and the 808 pumps; too short and it clicks.','SIDECHAIN: pick the Kick track number here. Without this, it ducks on itself.','The gain reduction graph should dip in time with the kick.'],'Fruity Limiter in COMP mode, keyed by the kick (drawing)')}
 <h2>Finish the 808 track</h2>
-<ul><li><b>Mono</b>: turn the 808 track's stereo separation fully to mono. Low end must be centred or it disappears on club systems and phones.</li><li><b>EQ</b>: a high-pass at about 25 Hz removes rumble nobody hears but the limiter reacts to. Do not boost the lows; turn the track up instead.</li><li><b>Level</b>: the 808 is often the loudest thing in the mix. Peak around −6 dB on its track and let the kick poke through on top.</li><li><b>Check</b>: put ${plug('wavecandy')} or ${plug('span')} on the master and look for one clean low bump, not two.</li></ul>
+<ul><li><b>Mono</b>: turn the 808 track's stereo separation knob fully clockwise (mono). Stereo lows can cancel when a club PA or a phone sums the mix to mono.</li><li><b>EQ</b>: a high-pass at about 25 Hz removes rumble nobody hears but the limiter reacts to. Do not boost the lows; turn the track up instead.</li><li><b>Level</b>: the 808 is often the loudest thing in the mix. Peak around −6 dB on its track and let the kick poke through on top.</li><li><b>Check</b>: put ${plug('wavecandy')} or ${plug('span')} on the master and look for one clean low bump, not two.</li></ul>
 <div class="tablewrap"><table><thead><tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr></thead><tbody>
 <tr><td>Low end sounds muddy</td><td>808 out of tune with the chords</td><td>Set the root note; check against a piano</td></tr>
 <tr><td>808 disappears on phones</td><td>Pure sub, no harmonics</td><td>Add distortion, 40–70% mix</td></tr>
@@ -768,7 +768,7 @@ ${tip('Keep it moving','Change something every 4 or 8 bars: a hat pattern, an 80
 ${mixLab()}
 <h2>1. Route everything</h2>
 <p>Select all channels in the Channel Rack and press ${kbd(mod()+'+L')}: each sound gets its own mixer track. Name and colour them. Then route all drums to one <b>drum bus</b> track (select the drum tracks, right-click the bus's routing arrow → <b>Route to this track only</b>) so you can process and turn them up together.</p>
-${fig(mixer({co:{strip:1,meter:2,fader:3,fx:4,send:5,master:6}}),860,['Each sound on its own mixer track.','Meters: green is fine; red at the top means that track is too loud.','Fader: the level. Do most of the mix here.','Effect slots run top to bottom: EQ, then compression, then saturation, then anything else.','Routing arrows: send a track to a bus or the reverb track.','Master: everything ends here.'],'Mixer (drawing). Meters move with the preview.')}
+${fig(mixer({co:{strip:1,meter:2,fader:3,fx:4,send:5,master:6}}),860,['Each sound on its own mixer track.','Meters: green is fine; red at the top means that track is too loud.','Fader: the level. Do most of the mix here.','Effect slots run top to bottom. A common order is EQ → compression → saturation; on 808s many producers distort first, then EQ.','Routing arrows: send a track to a bus or the reverb track.','Master: everything ends here.'],'Mixer (drawing). Meters move with the preview.')}
 <h2>2. Levels first, and leave headroom</h2>
 <ol class="steps"><li>Pull every fader down. Bring up the kick to around −10 dB on its meter.</li><li>Bring in the 808 until kick and 808 feel like one hit, then the snare, then the main melody, then everything else.</li><li>The master should peak around −6 dB before any master plugins. That space is headroom for the limiter.</li><li>In the mix lab, load the <b>rough mix</b>: everything at full volume, nothing cut. Hear how the hats and chords bury the 808. Pull the hats and chords down first.</li></ol>
 <h2>3. EQ: cut space, then shape</h2>
@@ -799,8 +799,8 @@ ${delayTable(cur.bpm)}
 <h2>6. Width</h2>
 <ul><li>Centre: kick, 808, snare, main vocal and the main hook.</li><li>Wide: pads, chords, background vocals, FX. Use ${plug('stereo')} or a chorus.</li><li>Check in mono now and then (Wave Candy or a mono button on the master): if a sound vanishes, it is too wide.</li></ul>
 <h2>7. The master: loud enough, not crushed</h2>
-${fig(meterMock({co:{int:1,short:2,tp:3,hist:4}}),600,['Integrated loudness over the whole song. Rap and trap beats usually land around −9 to −6 LUFS; R&B a little quieter, −11 to −8.','Short-term loudness: watch it on the hook.','True peak: keep it at or below −1 dB so it does not distort after conversion to MP3 or streaming.','Loudness over time: the hook should be the loudest part.'],'Loudness meter on the master (drawing)')}
-<ol class="steps"><li>Last on the master: ${plug('limiter')} (or ${plug('maximus')}). Set its ceiling to −1 dB.</li><li>Raise its gain until the meter reaches your target. Stop when the 808 starts to crackle or the kick loses its punch.</li><li>Streaming services turn loud songs down to around −14 LUFS, so pushing past about −7 LUFS mostly costs punch.</li><li>In the mix lab, switch the <b>Master limiter</b> off and on and watch the level meter.</li></ol>
+${fig(meterMock({co:{int:1,short:2,tp:3,hist:4}}),600,['Integrated loudness over the whole song. Rap and trap beats usually land around −9 to −6 LUFS; R&B a little quieter, −11 to −8.','Short-term loudness: watch it on the hook.','True peak: −1 dBTP or lower, and −2 dBTP for loud masters (Spotify\'s guidance), so it does not distort after conversion to MP3 or streaming.','Loudness over time: the hook should be the loudest part.'],'Loudness meter on the master (drawing)')}
+<ol class="steps"><li>Last on the master: ${plug('limiter')} (or ${plug('maximus')}). Set its ceiling to −1 dB (−2 dB for loud masters), then confirm the true peak on a meter that reads dBTP, such as Youlean.</li><li>Raise its gain until the meter reaches your target. Stop when the 808 starts to crackle or the kick loses its punch.</li><li>Spotify and YouTube play songs at about −14 LUFS and Apple Music at about −16, so a −7 LUFS master is simply turned down. Pushing harder mostly costs punch.</li><li>In the mix lab, switch the <b>Master limiter</b> off and on and watch the level meter.</li></ol>
 <h2>8. Check like an engineer</h2>
 <ul><li><b>Reference</b>: drop a song you like into the Playlist on a muted track and A/B at the same volume.</li><li><b>Phone check</b>: switch on Phone speaker in the labs, then check on your real phone. If the 808 vanishes, add distortion.</li><li><b>Fresh ears</b>: mix at a low volume, take breaks, and finish the next day.</li><li><b>Export a test</b> and listen in the car.</li></ul>
 ${warn('Clipping','A red meter on a track means that track is too loud. Fix it with its fader or plugin output, not with the master.')}`},
