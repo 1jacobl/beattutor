@@ -251,7 +251,6 @@ function tone(t,m,dur,timbre,vol=1,bus='Chords'){const g=ctx.createGain(),f=freq
  else if(timbre==='pluck'){const o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;o.connect(g);ns=[o];env(g,t,.003,.14*vol,.35)}
  else{const o=ctx.createOscillator(),o2=ctx.createOscillator(),g2=ctx.createGain();o.frequency.value=f;o2.type='triangle';o2.frequency.value=f*2;g2.gain.value=.15;o2.connect(g2);g2.connect(g);o.connect(g);ns=[o,o2];g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.1*vol,t+.008);g.gain.exponentialRampToValueAtTime(.035*vol,t+.4);g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.45,dur))}
  g.connect(BUS[bus].in);ns.forEach(o=>{o.start(t);o.stop(t+Math.max(.5,dur)+.05)})}
-function playNote(m,timbre='keys'){audio();tone(ctx.currentTime+.01,m,.9,timbre,1,'Melody')}
 function scope(){}
 
 /* ================= sequencer ================= */
@@ -387,7 +386,7 @@ const TYPE={48:'Z',49:'S',50:'X',51:'D',52:'C',53:'V',54:'G',55:'B',56:'H',57:'N
 const KEYOF=Object.fromEntries(Object.entries(TYPE).map(([m,k])=>[k.toLowerCase(),+m]));
 function keysHtml(start,count,label){const wh=[];for(let m=start;m<start+count;m++)if(!isBlack(m))wh.push(m);const ww=100/wh.length;let wi=0,h='';for(let m=start;m<start+count;m++){if(isBlack(m))h+=`<div class="b" data-m="${m}" style="left:calc(${wi*ww}% - ${ww*.3}%);width:${ww*.6}%"></div>`;else{h+=`<div class="w" data-m="${m}" style="left:${wi*ww}%;width:${ww}%">${label&&m%12===0?`<span class="lbl">C${Math.floor(m/12)-1}</span>`:''}</div>`;wi++}}return h}
 function qwerty(o={}){const c=o.co||{};const rows=[['1','2','3','4','5','6','7','8','9','0'],['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['Z','X','C','V','B','N','M',',','.']];
- return `<div class="qw" data-ui>${rows.map((r,ri)=>`<div class="qw-r" style="padding-left:${[0,26,40,62][ri]}px"${ri===1?co(c,'upper'):ri===3?co(c,'lower'):''}>${r.map(k=>{const m=KEYOF[k.toLowerCase()];return `<div class="qk ${m===undefined?'':isBlack(m)?'bk':'wk'}" ${m!==undefined?`data-m="${m}"`:''}>${k}<small>${m!==undefined?flName(m):''}</small></div>`}).join('')}</div>`).join('')}</div>`}
+ return `<div class="qw" data-ui data-typing>${rows.map((r,ri)=>`<div class="qw-r" style="padding-left:${[0,26,40,62][ri]}px"${ri===1?co(c,'upper'):ri===3?co(c,'lower'):''}>${r.map(k=>{const m=KEYOF[k.toLowerCase()];return `<div class="qk ${m===undefined?'':isBlack(m)?'bk':'wk'}" ${m!==undefined?`data-m="${m}"`:''}>${k}<small>${m!==undefined?flName(m):''}</small></div>`}).join('')}</div>`).join('')}</div>`}
 function dragY(el,onMove,spring){el.addEventListener('pointerdown',e=>{e.preventDefault();const y0=e.clientY;const mv=ev=>onMove(Math.max(-30,Math.min(30,ev.clientY-y0)));const up=()=>{if(spring)onMove(0);removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)})}
 function bindHW(root){
  $$('.hw-pad',root).forEach(p=>{if(p._b)return;p._b=1;p.addEventListener('pointerdown',e=>{e.preventDefault();audio();const fire=()=>{DR[p.dataset.lane](ctx.currentTime,hwState.full?1:.85);p.classList.add('lit');setTimeout(()=>p.classList.remove('lit'),90)};fire();let rt=null;if(hw.nr)rt=setInterval(fire,60/cur.bpm/4*1000);const up=()=>{clearInterval(rt);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};addEventListener('pointerup',up);addEventListener('pointercancel',up)})});
@@ -404,9 +403,7 @@ function bindHW(root){
   else if(k==='full'){hwState.full=!hwState.full;all('full').forEach(x=>x.classList.toggle('on',!!hwState.full));toast(msg.full)}
   else if(k==='up'||k==='down'){hw.oct=Math.max(-2,Math.min(2,hw.oct+(k==='up'?1:-1)));$$('.hw').forEach(h=>{const kk=h.querySelector('.hw-keys');const badge=kk.querySelector(':scope>mark.co');const n=$$('[data-m]',kk).length;kk.innerHTML=keysHtml((n===49?36:48)+hw.oct*12,n,true);if(badge)kk.appendChild(badge);bindKeys(h)});toast('Keys now start at C'+(3+hw.oct))}
   else if(msg[k])toast(msg[k])})})}
-function bindKeys(root){$$('.hw-keys [data-m],.qk[data-m]',root).forEach(k=>{if(k._b)return;k._b=1;k.addEventListener('pointerdown',e=>{e.preventDefault();playNote(+k.dataset.m,cur.timbre==='saw'?'saw':'keys');k.classList.add('hit');setTimeout(()=>k.classList.remove('hit'),260)})})}
 addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey||e.repeat||/^(INPUT|SELECT|TEXTAREA|BUTTON|SUMMARY|A)$/.test(document.activeElement.tagName))return;
- const q=$('.qw');if(q){const m=KEYOF[e.key.toLowerCase()];if(m!==undefined){playNote(m);$$(`.qk[data-m="${m}"]`).forEach(el=>{el.classList.add('hit');setTimeout(()=>el.classList.remove('hit'),200)});return}}
  const sim=$('.sim');if(sim){const map={F5:'Playlist',F6:'Channel rack',F7:'Piano roll',F9:'Mixer'};if(map[e.key]){e.preventDefault();simShow(sim,map[e.key]);return}}
  const sp=$('.slicepads');if(sp&&/^[1-8]$/.test(e.key)){playSlice(+e.key-1);return}
  if(e.code==='Space'){e.preventDefault();seq.on?stopSeq():startSeq()}});
@@ -540,86 +537,356 @@ async function midiConnect(){if(!midiSupported()){toast('Use Chrome or Edge to p
   toast(MIDI.inputs.length?'Connected: '+MIDI.inputs.map(i=>i.name).join(', '):'Allowed. Plug in your keyboard')}catch(e){MIDI.state='denied';midiUI();toast('Keyboard access was blocked. Allow MIDI for this site in the browser settings')}}
 /* pads: MIDI channel 10, or notes 36-51 sent by a pad bank, map to drum lanes */
 const PAD_LANES=['Kick','Snare','Hat','Open','Kick','Snare','Perc','Open','Kick','Snare','Hat','Open','Perc','Hat','Snare','Kick'];
-const isPadMsg=(ch,note)=>ch===9||(prof.kb!=='big'&&note>=36&&note<=51&&MIDI.padMode);
-MIDI.padMode=false;
-function midiMessage(e){const [st,a,b]=e.data;const type=st&0xf0,ch=st&0x0f;
- if(type===0x90&&b>0)return inputNote({note:a,vel:b/127,ch,src:'midi',pad:isPadMsg(ch,a)});
- if(type===0x80||(type===0x90&&b===0))return inputNoteOff({note:a,ch,src:'midi',pad:isPadMsg(ch,a)});
- if(type===0xb0)return inputCC(a,b/127);
- if(type===0xe0){const v=((b<<7)|a)/8192-1;$$('.hw-wheel[data-w="pitch"],.hw-strip[data-w="pitch"]').forEach(w=>w.style.setProperty('--wy',(-v*24)+'px'));$$('.hw-joy').forEach(j=>j.style.setProperty('--jx',(v*14)+'px'))}}
-function inputNote(n){for(const l of MIDI.listeners)if(l.onNote&&l.onNote(n)===true)return;MIDI.down.add(n.note);audio();
- if(n.pad){const lane=PAD_LANES[(n.note-36+160)%16]||'Kick';DR[lane](ctx.currentTime,.5+.5*n.vel);$$(`.hw-pad[data-lane="${lane}"]`).slice(0,1).forEach(x=>{x.classList.add('lit');setTimeout(()=>x.classList.remove('lit'),110)})}
- else{tone(ctx.currentTime+.005,n.note,.9,cur.timbre==='saw'?'saw':'keys',.6+.6*n.vel,'Melody');$$(`.hw-keys [data-m="${n.note}"],.qk[data-m="${n.note}"],.pr-k[data-m="${n.note}"]`).forEach(k=>k.classList.add('hit'))}}
-function inputNoteOff(n){MIDI.down.delete(n.note);for(const l of MIDI.listeners)if(l.onNoteOff&&l.onNoteOff(n)===true)return;$$(`.hw-keys [data-m="${n.note}"],.qk[data-m="${n.note}"],.pr-k[data-m="${n.note}"]`).forEach(k=>k.classList.remove('hit'))}
 /* knobs: the first eight CC numbers a controller sends become knobs 1-8 (learned, saved) */
-function inputCC(cc,v){if(cc===64)return;let idx=MIDI.ccMap[cc];if(idx==null){const used=Object.values(MIDI.ccMap);for(let i=0;i<8;i++)if(!used.includes(i)){idx=i;break}if(idx==null)return;MIDI.ccMap[cc]=idx;store.set('ccMap',MIDI.ccMap)}
- hw.knobs[idx]=v;$$(`.hw-kn[data-k="${idx}"] i`).forEach(x=>x.style.setProperty('--r',(-135+v*270)+'deg'));if(idx===0){hw.vol=v;if(master)master.gain.value=v}if(idx===1){setCut(200*Math.pow(60,v))}}
 /* computer keyboard as a fallback instrument everywhere (when not typing in a field) */
 const QWERTY_PADS={a:0,s:1,d:2,f:3,g:4,h:5,j:6,k:7};
 
 /* ================= music theory unit (interactive) ================= */
 const kbWidget=(id,start=48,count=25)=>fit(`<div class="hw" data-ui style="width:880px;padding:12px"><div class="hw-keys kbw" id="${id}" style="margin:0">${keysHtml(start,count,true)}</div></div>`,880);
 function kbShow(id,ms,labels){const el=document.getElementById(id);if(!el)return;$$('[data-m]',el).forEach(k=>{const m=+k.dataset.m;k.classList.toggle('hit',ms.includes(m));const old=k.querySelector('.nl');if(old)old.remove();if(labels&&ms.includes(m)){const s=document.createElement('span');s.className='nl';s.textContent=typeof labels==='function'?labels(m):NN[m%12];k.appendChild(s)}})}
-function playMs(ms,spread=0,dur=1.1){audio();ms.forEach((m,i)=>tone(ctx.currentTime+.01+i*spread,m,dur,'keys',.9,'Melody'))}
 const QUAL={'Major':[0,4,7],'Minor':[0,3,7],'Diminished':[0,3,6],'Major 7':[0,4,7,11],'Minor 7':[0,3,7,10],'Dominant 7':[0,4,7,10],'Minor 9':[0,3,7,10,14],'Major 9':[0,4,7,11,14]};
 const QSYM={'Major':'','Minor':'m','Diminished':'dim','Major 7':'maj7','Minor 7':'m7','Dominant 7':'7','Minor 9':'m9','Major 9':'maj9'};
 const ddOpts=(arr,val)=>arr.map(([v,l])=>({v:String(v),l,sel:String(v)===String(val)}));
-const THEORY=[
-{id:'notes',mod:'Music theory',title:()=>'Notes and the keyboard',min:15,practice:['find-c'],body:()=>`
-<p>Music uses 12 notes, then repeats them higher and lower. On a keyboard the pattern is easy to see: groups of two and three black keys. <b>C</b> is always the white key just left of a group of two black keys.</p>
-${kbWidget('kbNotes')}
-<div class="row" style="margin-top:8px"><button class="btn" data-show="white">Show the white keys</button><button class="btn" data-show="black">Show the black keys</button><button class="btn" data-show="c">Show every C</button></div>
-<h2>Names</h2><p>The white keys are C D E F G A B. A black key is named after its neighbours: the one above C is <b>C#</b> (C sharp), which is the same key as <b>Db</b> (D flat). FL Studio uses sharps.</p>
-<p>From one C to the next is an <b>octave</b>. Notes an octave apart sound like the same note, higher or lower. That is why an 808 an octave below a chord still fits.</p>
-<h2>Octave numbers: FL is different</h2><p>Most keyboards and music books call middle C <b>C4</b>. FL Studio calls the same key <b>C5</b>. Same note, different label: if a tutorial says C4 and FL shows C5, nothing is wrong. This site uses FL's names inside the FL drawings.</p>
-<h2>Half steps and whole steps</h2><p>Moving to the very next key, black or white, is a <b>half step</b> (a semitone). Two half steps make a <b>whole step</b>. E to F and B to C are half steps with no black key between them. Scales and chords are built from these steps.</p>`},
-{id:'scales',mod:'Music theory',title:()=>'Scales and keys',min:20,practice:['c-major','a-minor'],body:()=>`
-<p>A <b>scale</b> is a set of notes that sound right together. The song's <b>key</b> is the scale it uses plus its home note (the root). Stay in the key and nothing clashes.</p>
-<div class="row" id="scaleCtl"><span class="small muted">Root</span>${ddHtml('scRoot',ddOpts(NN.map((n,i)=>[i,n]),0))}<span class="small muted">Scale</span>${ddHtml('scType',ddOpts([['Major','Major'],['Natural minor','Natural minor'],['Harmonic minor','Harmonic minor'],['Dorian (R&B minor)','Dorian'],['Minor pentatonic','Minor pentatonic']],'Major'))}<button class="btn primary" id="scPlay">Play it</button></div>
-${kbWidget('kbScale')}
-<p class="small muted" id="scSteps"></p>
-<h2>The two you will use most</h2>
-<div class="tablewrap"><table><thead><tr><th>Scale</th><th>Steps from the root</th><th>Sound</th></tr></thead><tbody><tr><td>Major</td><td class="mono">W W H W W W H</td><td>Bright, happy: plugg, some R&B</td></tr><tr><td>Natural minor</td><td class="mono">W H W W H W W</td><td>Dark, serious: trap, rage, drill</td></tr></tbody></table></div>
-<p>W is a whole step, H a half step. C major is all the white keys from C; A minor is the same white keys starting from A. Keys that share notes like this are <b>relative</b> major and minor.</p>
-<h2>Three more for flavour</h2><ul><li><b>Harmonic minor</b>: natural minor with the 7th raised a half step. That one note gives the sinister, eastern sound in a lot of dark trap.</li><li><b>Dorian</b>: natural minor with the 6th raised. Minor but warmer: a lot of R&B lives here.</li><li><b>Minor pentatonic</b>: five notes, no clashes possible. The safest scale for a first melody.</li></ul>
-${tip('In FL','Piano roll → View → Helpers → Scale highlighting. Pick the same root and scale and FL shades the in-key rows, so every note you draw on a shaded row is in key.')}`},
-{id:'chords',mod:'Music theory',title:()=>'Chords',min:25,practice:['triads'],body:()=>`
-<p>A chord is three or more notes played together. Build one by stacking every other note of the scale: the root, the 3rd and the 5th make a <b>triad</b>.</p>
-<div class="row" id="chCtl"><span class="small muted">Root</span>${ddHtml('chRoot',ddOpts(NN.map((n,i)=>[i,n]),9))}<span class="small muted">Type</span>${ddHtml('chQual',ddOpts(Object.keys(QUAL).map(q=>[q,q]),'Minor'))}<span class="small muted">Inversion</span>${ddHtml('chInv',ddOpts([[0,'Root position'],[1,'1st inversion'],[2,'2nd inversion']],0))}<button class="btn primary" id="chPlay">Play it</button></div>
-${kbWidget('kbChord')}
-<p id="chInfo" class="small muted"></p>
-<h2>Major vs minor</h2><p>The difference is one note. A <b>major</b> triad is root, 4 half steps up, then 3 more (C E G). A <b>minor</b> triad is root, 3 half steps, then 4 (C Eb G). Try switching between them above: the middle note moves and the mood flips.</p>
-<h2>Sevenths and ninths</h2><p>Keep stacking and you get 7th and 9th chords. They sound softer and more complex: <b>minor 7</b> and <b>major 7</b> chords are the sound of R&B and pluggnb. Rage and trap usually stay with plain triads, which hit harder under distortion.</p>
-<h2>Inversions keep your hand still</h2><p>An <b>inversion</b> moves the bottom note to the top. The chord keeps its name but changes shape, which lets you go from one chord to the next by moving each finger as little as possible. On 25 keys that matters.</p>`},
-{id:'progressions',mod:'Music theory',title:()=>'Chord progressions',min:25,practice:['am-f-c-g','pluggnb-chords'],body:()=>`
-<p>A <b>progression</b> is a chain of chords that repeats under the beat. Every key has seven chords that come from its scale. Musicians number them with Roman numerals, so the same pattern works in any key: upper case is major, lower case is minor, ° is diminished.</p>
-<div class="row"><span class="small muted">Key</span>${ddHtml('pgRoot',ddOpts(NN.map((n,i)=>[i,n]),9))}${ddHtml('pgType',ddOpts([['Natural minor','Minor'],['Major','Major']],'Natural minor'))}</div>
-<div class="chordrow" id="pgChords"></div>
-${kbWidget('kbProg')}
-<h2>Progressions to start from</h2><p>These show up across a lot of music. They are starting points, not rules: tap one to hear it in the key above.</p>
-<div class="list" id="pgCommon"></div>
-<h2>Why some chords lead to others</h2><p>The <b>V</b> chord pulls back to <b>I</b> (or <b>v</b> to <b>i</b> in minor); that pull is what makes a progression feel like it resolves. Harmonic minor turns v into a major V, which makes the pull much stronger. That is the G major in the Dark trap recipe (key of C minor).</p>`},
-{id:'rhythm',mod:'Music theory',title:()=>'Rhythm and melody',min:25,practice:['hook','half-time'],body:()=>`
-<p>A bar of 4/4 has four beats. Each beat splits into four 16th notes, counted <b>1 e & a, 2 e & a, 3 e & a, 4 e & a</b>. That is the 16-step grid in FL's Channel Rack: one step is one 16th.</p>
-<div class="rgrid" id="rgGrid">${Array.from({length:16},(_,i)=>`<button class="rg ${[0,8].includes(i)?'on':''}" data-i="${i}" aria-pressed="${[0,8].includes(i)}"><b>${['1','e','&','a'][i%4]==='1'?(i/4+1):['1','e','&','a'][i%4]}</b></button>`).join('')}</div>
-<div class="row" style="margin-top:10px"><button class="btn primary" id="rgPlay">Play</button><label class="small muted" for="rgSwing">Swing</label><input type="range" id="rgSwing" min="0" max=".6" step=".05" value="0" style="accent-color:var(--hue)"><span class="small muted">BPM</span>${ddHtml('rgBpm',ddOpts([[70,'70'],[90,'90'],[140,'140'],[160,'160']],140))}</div>
-<p class="small muted">Click steps to place hits. Steps 1 and 9 (beats 1 and 3) are on: at 140 BPM that is the half-time trap feel.</p>
-<h2>Half-time, triplets and swing</h2><ul><li><b>Half-time</b>: at 140–160 BPM, putting the snare on beat 3 instead of 2 and 4 makes the beat feel half as fast. Trap and rage live here.</li><li><b>Triplets</b>: three even notes in the space of two. Hi-hat triplet rolls are the classic trap move: in FL's piano roll set the snap to 1/3 step.</li><li><b>Swing</b>: delays every second 16th a little. Drag the slider above and listen to the grid loosen up. FL's Channel Rack has the same Swing knob.</li></ul>
-<h2>Writing a melody</h2><ol class="steps"><li>Stay in the key: use the shaded rows (View → Helpers → Scale highlighting).</li><li>Put <b>chord notes</b> on the strong beats (1 and 3). Notes between them can pass through other scale notes.</li><li>Keep it short: two bars is plenty. Repeat it.</li><li><b>Call and answer</b>: play the phrase, then repeat it with a different ending. Most hooks work like this.</li><li>Leave space. Rests are part of the melody, and they leave room for the artist.</li></ol>`}
+/* ================= keyboard sound: FM electric piano =================
+   Two-operator FM (ratio 1) for the body plus a fast-decaying high "tine" for the attack. Velocity sets brightness and
+   level; notes sustain while held and release on note-off (or sustain pedal). Own bus, no low cut, a little reverb. */
+let keysBus=null;
+function keysOut(){audio();if(!keysBus){keysBus=ctx.createGain();keysBus.gain.value=.9;const send=ctx.createGain();send.gain.value=.14;keysBus.connect(master);keysBus.connect(send);send.connect(conv)}return keysBus}
+function epVoice(m,vel=.8,start){const out=keysOut();const t=start??ctx.currentTime+.004;const f=freq(m);vel=Math.max(.15,Math.min(1,vel));
+ const car=ctx.createOscillator(),mod=ctx.createOscillator(),mg=ctx.createGain(),tine=ctx.createOscillator(),tg=ctx.createGain(),body=ctx.createOscillator(),bg=ctx.createGain(),env=ctx.createGain(),lp=ctx.createBiquadFilter();
+ car.frequency.value=f;mod.frequency.value=f;mg.gain.setValueAtTime(f*(.5+1.3*vel),t);mg.gain.setTargetAtTime(f*.06,t,.3);mod.connect(mg);mg.connect(car.frequency);
+ tine.frequency.value=f*14;tg.gain.setValueAtTime(f*(.25+.6*vel),t);tg.gain.setTargetAtTime(0,t,.018);tine.connect(tg);tg.connect(car.frequency);
+ body.frequency.value=f;bg.gain.value=.45;body.connect(bg);
+ lp.type='lowpass';lp.frequency.value=Math.min(8000,1400+3600*vel+f*1.5);lp.Q.value=.2;
+ const pk=(.09+.13*vel)*Math.pow(262/Math.max(80,f),.22);env.gain.setValueAtTime(.0001,t);env.gain.exponentialRampToValueAtTime(pk,t+.005);env.gain.setTargetAtTime(pk*.45,t+.005,.22);env.gain.setTargetAtTime(.0001,t+.7,2.4);
+ car.connect(env);bg.connect(env);env.connect(lp);lp.connect(out);const oscs=[car,mod,tine,body];oscs.forEach(o=>{o.start(t);o.stop(t+9)});
+ let done=false;return{stop(at){if(done)return;done=true;const s=Math.max(at??ctx.currentTime,t+.03);if(env.gain.cancelAndHoldAtTime)env.gain.cancelAndHoldAtTime(s);else env.gain.cancelScheduledValues(s);env.gain.setTargetAtTime(.0001,s,.09);oscs.forEach(o=>{try{o.stop(s+.7)}catch(e){}})}}}
+const VOICES=new Map(),SUSTAINED=new Set();let SUSTAIN=false;
+function noteOn(m,vel=.8){const old=VOICES.get(m);if(old)old.stop();VOICES.set(m,epVoice(m,vel));SUSTAINED.delete(m)}
+function noteOff(m){const v=VOICES.get(m);if(!v)return;if(SUSTAIN){SUSTAINED.add(m);return}v.stop();VOICES.delete(m)}
+function setSustain(on){SUSTAIN=on;if(!on){for(const m of SUSTAINED){if(!MIDI.down.has(m)){const v=VOICES.get(m);if(v){v.stop();VOICES.delete(m)}}}SUSTAINED.clear()}}
+function playNote(m){audio();epVoice(m,.75).stop(ctx.currentTime+.9)}
+function playMs(ms,spread=0,dur=1.2,vel=.7){audio();const t0=ctx.currentTime+.02;ms.forEach((m,i)=>epVoice(m,vel,t0+i*spread).stop(t0+i*spread+dur))}
+
+/* ================= one input path for MIDI, mouse and computer keys =================
+   Sound first (piano voice or drum), then listeners (practice judging, theory checks) receive the note. */
+function padLaneFor(n){const pr=PR.ex&&PR.state!=='idle'&&PR.ex.kind==='pads';if(n.lane!=null)return{idx:n.lane,name:LANES[n.lane]};const rel=((n.note-36)%16+16)%16;return pr?{idx:rel%4,name:LANES[rel%4]}:{idx:rel%4,name:PAD_LANES[rel]}}
+function inputNote(n){audio();const prPads=PR.ex&&PR.state!=='idle'&&PR.ex.kind==='pads';const asPad=n.lane!=null||n.pad||prPads;
+ if(asPad){const L=padLaneFor(n);n.laneIdx=L.idx;DR[L.name](ctx.currentTime,.5+.5*(n.vel??1));$$(`.hw-pad[data-lane="${L.name}"]`).slice(0,1).forEach(x=>{x.classList.add('lit');setTimeout(()=>x.classList.remove('lit'),110)})}
+ else{noteOn(n.note,n.vel??.8);MIDI.down.add(n.note);$$(`.hw-keys [data-m="${n.note}"],.qk[data-m="${n.note}"],.pr-k[data-m="${n.note}"]`).forEach(k=>k.classList.add('hit'))}
+ for(const l of MIDI.listeners)l.onNote&&l.onNote(n)}
+function inputNoteOff(n){if(n.note!=null){MIDI.down.delete(n.note);noteOff(n.note);$$(`.hw-keys [data-m="${n.note}"],.qk[data-m="${n.note}"],.pr-k[data-m="${n.note}"]`).forEach(k=>k.classList.remove('hit'))}for(const l of MIDI.listeners)l.onNoteOff&&l.onNoteOff(n)}
+function bindKeys(root){$$('.hw-keys [data-m],.qk[data-m]',root).forEach(k=>{if(k._b)return;k._b=1;const m=+k.dataset.m;let held=false;const up=()=>{if(!held)return;held=false;inputNoteOff({note:m,src:'mouse'})};
+ k.addEventListener('pointerdown',e=>{e.preventDefault();held=true;inputNote({note:m,vel:.75,src:'mouse'})});k.addEventListener('pointerup',up);k.addEventListener('pointerleave',up);k.addEventListener('pointercancel',up)})}
+/* computer keyboard as an instrument: active on pages that ask for it, and during practice */
+const typingOn=()=>!!document.querySelector('[data-typing]')||(PR.ex&&PR.state==='play');
+const KEYS_DOWN=new Set();
+addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)||document.activeElement.closest?.('.dd2'))return;if(!typingOn())return;const k=e.key.toLowerCase();
+ const pads=PR.ex&&PR.state==='play'&&PR.ex.kind==='pads';if(pads){const i='asdf'.indexOf(k);if(i<0)return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;inputNote({lane:i,vel:1,src:'kbd'});return}
+ const m=KEYOF[k];if(m===undefined)return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat||KEYS_DOWN.has(k))return;KEYS_DOWN.add(k);inputNote({note:m,vel:.8,src:'kbd'})},true);
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(!KEYS_DOWN.has(k))return;KEYS_DOWN.delete(k);const m=KEYOF[k];if(m!==undefined)inputNoteOff({note:m,src:'kbd'})},true);
+addEventListener('blur',()=>{for(const k of KEYS_DOWN){const m=KEYOF[k];if(m!==undefined)inputNoteOff({note:m})}KEYS_DOWN.clear()});
+
+/* ================= keyboard check: live monitor, knob and pad learning, octave follow ================= */
+MIDI.padCh=store.get('padCh',9);MIDI.log=[];MIDI.learn=null;
+function midiLog(type,ch,a,b){MIDI.log.unshift({type,ch,a,b,t:Date.now()});MIDI.log.length=Math.min(MIDI.log.length,8);const el=$('#midiMon');if(el)el.innerHTML=midiMonHtml()}
+function midiMonHtml(){if(!MIDI.log.length)return'<p class="small muted" style="margin:0">Nothing yet. Press a key, hit a pad or turn a knob.</p>';return `<table><tbody>${MIDI.log.map(e=>`<tr><td>${e.type==='note'?(e.ch===MIDI.padCh?'Pad':'Key'):e.type==='cc'?'Knob / control':'Pitch bend'}</td><td class="tnum">channel ${e.ch+1}</td><td class="tnum">${e.type==='note'?`note ${e.a} (${flName(e.a)} in FL)`:e.type==='cc'?`CC ${e.a} = ${e.b}`:''}</td></tr>`).join('')}</tbody></table>`}
+function hwFollow(note){$$('.hw').forEach(h=>{const kk=h.querySelector('.hw-keys');if(!kk||kk.classList.contains('kbw'))return;const ks=$$('[data-m]',kk);if(!ks.length)return;const lo=+ks[0].dataset.m,n=ks.length;if(note>=lo&&note<lo+n)return;const base=note-((note%12)+12)%12-(n>25?12:0);hw.oct=Math.round((base-48)/12);const badge=kk.querySelector(':scope>mark.co');kk.innerHTML=keysHtml(48+hw.oct*12,n,true);if(badge)kk.appendChild(badge);bindKeys(h)})}
+function midiMessage(e){const [st,a,b]=e.data;const type=st&0xf0,ch=st&0x0f;
+ if(type===0x90&&b>0){midiLog('note',ch,a,b);if(MIDI.learn==='pad'){if(MIDI.keyCh===ch&&ch!==MIDI.padCh){toast(`That came in on channel ${ch+1}, the same channel as your keys. Hit a pad, not a key. If it was a pad, set the pads to their own channel in your keyboard's editor (most controllers, the MPK Mini included, use channel 10 for pads).`);return}MIDI.padCh=ch;store.set('padCh',ch);MIDI.learn=null;toast(`Pads set to MIDI channel ${ch+1}`);midiSetupUI();return}const pad=ch===MIDI.padCh;if(!pad){MIDI.keyCh=ch;hwFollow(a)}return inputNote({note:a,vel:b/127,ch,src:'midi',pad})}
+ if(type===0x80||(type===0x90&&b===0))return inputNoteOff({note:a,ch,src:'midi',pad:ch===MIDI.padCh});
+ if(type===0xb0){midiLog('cc',ch,a,b);return inputCC(a,b/127)}
+ if(type===0xe0){midiLog('bend',ch,a,b);const v=((b<<7)|a)/8192-1;$$('.hw-wheel[data-w="pitch"],.hw-strip[data-w="pitch"]').forEach(w=>w.style.setProperty('--wy',(-v*24)+'px'));$$('.hw-joy').forEach(j=>j.style.setProperty('--jx',(v*14)+'px'))}}
+function inputCC(cc,v){if(cc===64){setSustain(v>=.5);return}if(cc===1){$$('.hw-wheel[data-w="mod"],.hw-strip[data-w="mod"]').forEach(w=>w.style.setProperty('--wy',(-v*24)+'px'));return}
+ if(typeof MIDI.learn==='number'){for(const k in MIDI.ccMap)if(MIDI.ccMap[k]===MIDI.learn)delete MIDI.ccMap[k];MIDI.ccMap[cc]=MIDI.learn;store.set('ccMap',MIDI.ccMap);MIDI.learn++;if(MIDI.learn>7){MIDI.learn=null;toast('All 8 knobs learned')}midiSetupUI()}
+ const idx=MIDI.ccMap[cc];if(idx==null)return;hw.knobs[idx]=v;$$(`.hw-kn[data-k="${idx}"] i`).forEach(x=>x.style.setProperty('--r',(-135+v*270)+'deg'));if(idx===0){hw.vol=v;if(master)master.gain.value=v}if(idx===1){setCut(200*Math.pow(60,v))}}
+function midiSetupUI(){const el=$('#midiLearn');if(!el)return;const k=MIDI.learn;el.innerHTML=typeof k==='number'?`<b>Turn knob ${k+1}</b> on your keyboard.`:k==='pad'?'<b>Hit any pad.</b>':`Knobs learned: ${Object.keys(MIDI.ccMap).length} of 8. Pads on MIDI channel ${MIDI.padCh+1}.`}
+function midiCheckHtml(){return `<div class="setrow"><div><h2>Keyboard check</h2><p>Press keys, hit pads and turn knobs: each message shows here. Then teach the site your knobs and pads so they line up with the drawings.</p></div><div><div class="row"><button class="btn primary" data-midi-connect>Connect keyboard</button><button class="btn" id="learnKnobs">Learn knobs 1–8</button><button class="btn" id="learnPads">Learn pads</button></div><p class="small" id="midiLearn" style="margin:10px 0"></p><div class="tablewrap" id="midiMon">${midiMonHtml()}</div></div></div>`}
+function bindMidiCheck(){const k=$('#learnKnobs');if(!k)return;k.onclick=()=>{if(MIDI.state!=='on'){midiConnect()}MIDI.ccMap={};MIDI.learn=0;midiSetupUI()};$('#learnPads').onclick=()=>{if(MIDI.state!=='on'){midiConnect()}MIDI.learn='pad';midiSetupUI()};midiSetupUI()}
+
+/* ================= Music theory course: guided lessons =================
+   Each lesson is a list of steps. Notes use MIDI numbers (60 = middle C: "C4" in most books, "C5" in FL Studio). */
+const PCN={C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11};
+const CQ={'':[0,4,7],m:[0,3,7],dim:[0,3,6],aug:[0,4,8],sus2:[0,2,7],sus4:[0,5,7],'6':[0,4,7,9],m6:[0,3,7,9],'7':[0,4,7,10],maj7:[0,4,7,11],m7:[0,3,7,10],m7b5:[0,3,6,10],dim7:[0,3,6,9],add9:[0,4,7,14],madd9:[0,3,7,14],'9':[0,4,7,10,14],maj9:[0,4,7,11,14],m9:[0,3,7,10,14]};
+function parseChord(name){const m=name.match(/^([A-G](?:#|b)?)(.*)$/);if(!m||!(m[1] in PCN)||!(m[2] in CQ))throw new Error('Bad chord '+name);return{pc:PCN[m[1]],iv:CQ[m[2]]}}
+const rootMidi4=pc=>pc>=7?48+pc:60+pc; // roots between G3 and F#4 keep chords mid-keyboard
+function chordNotes(name,inv=0){const{pc,iv}=parseChord(name);let ns=iv.map(x=>rootMidi4(pc)+x);for(let i=0;i<inv;i++)ns.push(ns.shift()+12);while(Math.min(...ns)<48)ns=ns.map(n=>n+12);while(Math.max(...ns)>84)ns=ns.map(n=>n-12);return ns}
+const chordPcs=name=>{const{pc,iv}=parseChord(name);return [...new Set(iv.map(x=>(pc+x)%12))]};
+const SCALE_IV={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],harmonic:[0,2,3,5,7,8,11],dorian:[0,2,3,5,7,9,10],minpent:[0,3,5,7,10],majpent:[0,2,4,7,9],blues:[0,3,5,6,7,10]};
+function scaleNotes(root,type){const pc=PCN[root];const r=pc<=4?60+pc:48+pc;return SCALE_IV[type].map(x=>r+x).concat([r+12])}
+const nn=m=>NN[((m%12)+12)%12];
+/* step builders */
+const T=html=>({k:'text',html});
+const SHOW=(html,notes,o={})=>({k:'show',html,notes,play:o.play||'chord',spread:o.spread});
+const PLAY=(html,target,hint)=>({k:'play',html,target,hint});
+const QUIZ=(q,opts,ans,why,sound)=>({k:'quiz',q,opts,ans,why,sound});
+const CHART=(html,items)=>({k:'chart',html,items});
+const PROG=(html,chords,o={})=>({k:'prog',html,chords,romans:o.romans,bass:o.bass!==false,beat:o.beat||1});
+const GRID=(html,on,o={})=>({k:'grid',html,on,bpm:o.bpm||140,swing:o.swing||0,snare:o.snare||[]});
+const PRACTICE_STEP=(html,ids)=>({k:'practice',html,ids});
+const diat=(root,type)=>{const sc=SCALE_IV[type];const pc=PCN[root];const RN=['I','II','III','IV','V','VI','VII'];return sc.map((_,d)=>{const ns=[0,2,4].map(o=>{const ix=d+o;return pc+sc[ix%7]+12*Math.floor(ix/7)});const a=ns[1]-ns[0],b=ns[2]-ns[0];const q=a===4&&b===7?'':a===3&&b===7?'m':a===3&&b===6?'dim':'aug';const name=NN[ns[0]%12]+q;return{name,rn:q===''||q==='aug'?RN[d]:RN[d].toLowerCase()+(q==='dim'?'°':'')}})};
+const TC=[
+/* ---------------- Unit 1: The keyboard ---------------- */
+{id:'tk-keys',unit:'The keyboard',title:'Notes and the keyboard',min:10,steps:[
+ T(`<p>Music uses 12 different notes. After those 12, the same notes repeat higher and lower. On a keyboard you can see this as a repeating pattern of black keys: a group of <b>two</b>, then a group of <b>three</b>.</p><p>The white keys are named with the letters <b>A B C D E F G</b>, then the letters start again.</p>`),
+ SHOW(`<p><b>C</b> is the white key just to the left of every group of two black keys. Here are all the Cs.</p>`,[48,60,72,84],{play:'arp',spread:.35}),
+ PLAY(`<p>Your turn: play <b>any C</b>.</p>`,{type:'note',pc:0}),
+ SHOW(`<p>From C, the white keys go <b>C D E F G A B</b>, then the next C.</p>`,[60,62,64,65,67,69,71,72],{play:'arp',spread:.22}),
+ SHOW(`<p><b>F</b> is the white key just to the left of every group of three black keys.</p>`,[53,65,77],{play:'arp',spread:.35}),
+ PLAY(`<p>Your turn: play <b>any F</b>.</p>`,{type:'note',pc:5}),
+ QUIZ('Which note is just left of a group of three black keys?',['C','F','G','B'],1,'F always sits just left of the three black keys. C sits just left of the two.'),
+ QUIZ('Which note is just right of a group of two black keys?',['C','D','E','F'],2,'The two black keys sit between C, D and E, so E is just to their right.'),
+ PLAY(`<p>Play the white keys from C up to the next C: <b>C D E F G A B C</b>.</p>`,{type:'seq',notes:[60,62,64,65,67,69,71,72]})]},
+{id:'tk-steps',unit:'The keyboard',title:'Half steps, whole steps, sharps and flats',min:10,steps:[
+ T(`<p>The distance from one key to the very next key (white or black) is a <b>half step</b>, also called a semitone. It is the smallest distance on a keyboard.</p>`),
+ SHOW(`<p>C to the black key right above it is a half step.</p>`,[60,61],{play:'arp',spread:.4}),
+ SHOW(`<p>E to F has no black key between them, but it is still a half step, because they are next to each other. The same is true for <b>B to C</b>.</p>`,[64,65],{play:'arp',spread:.4}),
+ SHOW(`<p>Two half steps make a <b>whole step</b>. C to D is a whole step: it skips over the black key.</p>`,[60,62],{play:'arp',spread:.4}),
+ T(`<p>A black key is named after a neighbour. <b>Sharp (#)</b> means a half step up, <b>flat (b)</b> means a half step down. So the black key between C and D is both <b>C#</b> and <b>Db</b>: two names, one key. FL Studio always uses the sharp names.</p>`),
+ QUIZ('What is a half step above E?',['F','F#','D#','G'],0,'E and F are next to each other with no black key between them, so a half step above E is F.'),
+ QUIZ('What is another name for G#?',['Gb','Ab','A#','F#'],1,'G# is a half step above G, which is the same key as a half step below A: Ab.'),
+ QUIZ('How many half steps are in a whole step?',['1','2','3','4'],1,'A whole step is two half steps.'),
+ PLAY(`<p>Play a <b>whole step up from D</b>: D, then E.</p>`,{type:'seq',notes:[62,64]})]},
+{id:'tk-octaves',unit:'The keyboard',title:'Octaves and FL Studio\'s note names',min:8,steps:[
+ T(`<p>From one C to the next C is an <b>octave</b>: 12 half steps. Notes an octave apart have the same name and sound like the same note, higher or lower. That is why an 808 an octave below a chord still fits it.</p>`),
+ SHOW(`<p>Three Cs, each an octave apart.</p>`,[48,60,72],{play:'arp',spread:.4}),
+ T(`<p>Each octave gets a number. Most keyboards, sheet music and tutorials call middle C <b>C4</b>. <b>FL Studio calls the same key C5.</b> It is the same note with a different label, so if a tutorial says C4 and FL shows C5, nothing is wrong. In MIDI, middle C is note number 60.</p>`),
+ QUIZ('In FL Studio, middle C is labelled…',['C3','C4','C5','C6'],2,'FL labels middle C as C5. Most other software and sheet music call it C4.'),
+ QUIZ('How many half steps are in an octave?',['7','8','10','12'],3,'An octave is 12 half steps: all 12 notes, then the first one again.'),
+ PLAY(`<p>Play an <b>A</b>, then the <b>A one octave higher</b>.</p>`,{type:'seq',notes:[57,69]})]},
+/* ---------------- Unit 2: Scales and keys ---------------- */
+{id:'sc-major',unit:'Scales and keys',title:'The major scale',min:12,steps:[
+ T(`<p>A <b>scale</b> is a set of notes that sound good together, played in order. The <b>major scale</b> sounds bright and happy. Every major scale follows the same pattern of steps:</p><p style="font-size:20px"><b>W W H W W W H</b></p><p>W is a whole step, H is a half step.</p>`),
+ SHOW(`<p><b>C major</b> is all the white keys from C to C. Follow the pattern: C→D (W), D→E (W), E→F (H), F→G (W), G→A (W), A→B (W), B→C (H).</p>`,scaleNotes('C','major'),{play:'arp',spread:.22}),
+ SHOW(`<p>Start the same pattern on G and you need one black key: <b>F#</b>. That is <b>G major</b>: G A B C D E F# G.</p>`,scaleNotes('G','major'),{play:'arp',spread:.22}),
+ SHOW(`<p><b>D major</b> needs two: <b>F# and C#</b>. D E F# G A B C# D.</p>`,scaleNotes('D','major'),{play:'arp',spread:.22}),
+ QUIZ('Which note is in G major but not in C major?',['F#','Bb','C#','Eb'],0,'G major has one sharp, F#. Everything else matches C major.'),
+ QUIZ('What is the step pattern of the major scale?',['W H W W H W W','W W H W W W H','W W W H W W H','H W W W H W W'],1,'Major is W W H W W W H.'),
+ PLAY(`<p>Play the <b>C major scale</b> up one octave: C D E F G A B C.</p>`,{type:'seq',notes:scaleNotes('C','major')}),
+ PRACTICE_STEP(`<p>Now play it in time, with notes falling towards the keys.</p>`,['c-major'])]},
+{id:'sc-minor',unit:'Scales and keys',title:'The minor scale and relative keys',min:12,steps:[
+ T(`<p>The <b>natural minor scale</b> sounds darker and more serious. You hear it in a lot of trap, rage and drill. Its pattern is:</p><p style="font-size:20px"><b>W H W W H W W</b></p>`),
+ SHOW(`<p><b>A minor</b> is all the white keys from A to A.</p>`,scaleNotes('A','minor'),{play:'arp',spread:.22}),
+ T(`<p>A minor uses exactly the same notes as C major, just starting from A. Keys that share all their notes like this are <b>relative</b> keys. The relative minor starts on the <b>6th note</b> of the major scale; the relative major starts on the <b>3rd note</b> of the minor scale.</p>`),
+ SHOW(`<p><b>C minor</b> (not to be confused with A minor) starts on C: C D Eb F G Ab Bb C. Compared with C major, the 3rd, 6th and 7th notes are a half step lower.</p>`,scaleNotes('C','minor'),{play:'arp',spread:.22}),
+ QUIZ('What is the relative minor of C major?',['C minor','A minor','E minor','D minor'],1,'The 6th note of C major is A, so the relative minor is A minor.'),
+ QUIZ('What is the relative minor of G major?',['E minor','A minor','B minor','D minor'],0,'The 6th note of G major (G A B C D E F#) is E, so the relative minor is E minor.'),
+ QUIZ('Compared with C major, which notes are lower in C minor?',['The 2nd, 4th and 5th','The 3rd, 6th and 7th','Only the 7th','The root and 5th'],1,'Natural minor lowers the 3rd, 6th and 7th by a half step.'),
+ PLAY(`<p>Play the <b>A minor scale</b> up one octave: A B C D E F G A.</p>`,{type:'seq',notes:scaleNotes('A','minor')}),
+ PRACTICE_STEP(`<p>Play it in time.</p>`,['a-minor'])]},
+{id:'sc-other',unit:'Scales and keys',title:'Pentatonic, harmonic minor, Dorian and blues',min:12,steps:[
+ SHOW(`<p>The <b>minor pentatonic</b> has just five notes and no half steps between neighbours, so it is very hard to play a wrong note. <b>A minor pentatonic</b>: A C D E G.</p>`,scaleNotes('A','minpent'),{play:'arp',spread:.22}),
+ SHOW(`<p>The <b>major pentatonic</b> is its bright twin. <b>C major pentatonic</b>: C D E G A, the same five notes as A minor pentatonic.</p>`,scaleNotes('C','majpent'),{play:'arp',spread:.22}),
+ SHOW(`<p><b>Harmonic minor</b> is natural minor with the <b>7th raised</b> a half step. In A that turns G into <b>G#</b>, which pulls hard back to A and gives a dark, exotic sound used in a lot of trap.</p>`,scaleNotes('A','harmonic'),{play:'arp',spread:.22}),
+ SHOW(`<p><b>Dorian</b> is natural minor with the <b>6th raised</b>. <b>D Dorian</b> is all the white keys from D: D E F G A B C. Minor, but warmer: common in R&B and funk.</p>`,scaleNotes('D','dorian'),{play:'arp',spread:.22}),
+ SHOW(`<p>The <b>blues scale</b> is the minor pentatonic plus one extra note, the flat 5th. <b>A blues</b>: A C D Eb E G (FL shows Eb as D#).</p>`,scaleNotes('A','blues'),{play:'arp',spread:.22}),
+ QUIZ('Harmonic minor raises which note of the natural minor scale?',['The 2nd','The 3rd','The 6th','The 7th'],3,'Harmonic minor raises the 7th by a half step.'),
+ QUIZ('How many notes are in a pentatonic scale?',['4','5','6','7'],1,'Penta means five.'),
+ PLAY(`<p>Play <b>A minor pentatonic</b> up: A C D E G A.</p>`,{type:'seq',notes:scaleNotes('A','minpent')})]},
+{id:'sc-key',unit:'Scales and keys',title:'Finding the key of a song',min:10,steps:[
+ T(`<p>A song's <b>key</b> is its home note plus its scale, for example A minor. Most beats loop two to four chords, and everything sits in one key. To find it by ear:</p><ol class="steps"><li>Loop the song and play single low notes until one sounds settled under the whole loop. That is usually the <b>home note</b>.</li><li>Now play the note 3 half steps above it and the note 4 half steps above it. Whichever fits decides <b>minor</b> or <b>major</b>.</li><li>Check the rest of the scale notes against the melody and fix anything that clashes.</li></ol>`),
+ SHOW(`<p>Over A, the note <b>C</b> (3 half steps up) sounds minor…</p>`,[57,60],{play:'chord'}),
+ SHOW(`<p>…and <b>C#</b> (4 half steps up) sounds major. That one note, the <b>3rd</b>, decides the mood.</p>`,[57,61],{play:'chord'}),
+ T(`<p>In FL Studio, turn on <b>View → Helpers → Scale highlighting</b> in the piano roll and pick the key. FL shades the in-key rows, so every note you draw on a shaded row is in key.</p>`),
+ QUIZ('A loop uses only white keys and keeps landing on A. The key is most likely…',['C major','A minor','A major','E minor'],1,'White keys only, landing on A: A natural minor.'),
+ QUIZ('Which note decides whether a key is major or minor?',['The root','The 3rd','The 5th','The 7th'],1,'The 3rd: 4 half steps above the root is major, 3 is minor.')]},
+/* ---------------- Unit 3: Intervals ---------------- */
+{id:'iv-intervals',unit:'Intervals',title:'Intervals',min:15,steps:[
+ T(`<p>An <b>interval</b> is the distance between two notes, counted in half steps. Each distance has a name:</p><div class="tablewrap"><table><thead><tr><th class="num">Half steps</th><th>Interval</th><th>Sound</th></tr></thead><tbody><tr><td class="num">1</td><td>Minor 2nd</td><td>Tense, clashing</td></tr><tr><td class="num">2</td><td>Major 2nd</td><td>A step, mild</td></tr><tr><td class="num">3</td><td>Minor 3rd</td><td>Dark, sad</td></tr><tr><td class="num">4</td><td>Major 3rd</td><td>Bright, happy</td></tr><tr><td class="num">5</td><td>Perfect 4th</td><td>Open, hymn-like</td></tr><tr><td class="num">6</td><td>Tritone</td><td>Unstable, wants to move</td></tr><tr><td class="num">7</td><td>Perfect 5th</td><td>Strong, stable</td></tr><tr><td class="num">8</td><td>Minor 6th</td><td>Bittersweet</td></tr><tr><td class="num">9</td><td>Major 6th</td><td>Warm</td></tr><tr><td class="num">10</td><td>Minor 7th</td><td>Bluesy</td></tr><tr><td class="num">11</td><td>Major 7th</td><td>Dreamy, tense</td></tr><tr><td class="num">12</td><td>Octave</td><td>Same note, higher</td></tr></tbody></table></div>`),
+ SHOW(`<p><b>Minor 3rd</b>: C to Eb, 3 half steps. The core of every minor chord.</p>`,[60,63],{play:'arp',spread:.45}),
+ SHOW(`<p><b>Major 3rd</b>: C to E, 4 half steps. The core of every major chord.</p>`,[60,64],{play:'arp',spread:.45}),
+ SHOW(`<p><b>Perfect 5th</b>: C to G, 7 half steps. Strong and stable: it is in almost every chord.</p>`,[60,67],{play:'arp',spread:.45}),
+ SHOW(`<p><b>Tritone</b>: C to F#, 6 half steps. Tense: it wants to move somewhere.</p>`,[60,66],{play:'arp',spread:.45}),
+ QUIZ('Listen. Which interval is this?',['Minor 3rd','Major 3rd','Perfect 5th','Octave'],1,'C to E: 4 half steps, a major 3rd.',[60,64]),
+ QUIZ('Listen. Which interval is this?',['Perfect 4th','Tritone','Perfect 5th','Major 6th'],2,'C to G: 7 half steps, a perfect 5th.',[60,67]),
+ QUIZ('Listen. Which interval is this?',['Minor 3rd','Major 3rd','Major 2nd','Minor 6th'],0,'A to C: 3 half steps, a minor 3rd.',[57,60]),
+ QUIZ('How many half steps is a perfect 5th?',['5','6','7','8'],2,'A perfect 5th is 7 half steps.'),
+ PLAY(`<p>Play a <b>perfect 5th</b> from any note: two keys together, 7 half steps apart.</p>`,{type:'shape',iv:[0,7]})]},
+/* ---------------- Unit 4: Chords ---------------- */
+{id:'ch-triads',unit:'Chords',title:'Triads: major, minor, diminished, augmented',min:15,steps:[
+ T(`<p>A <b>triad</b> is a three-note chord: a <b>root</b>, a <b>3rd</b> above it and a <b>5th</b> above that. You build it by stacking two 3rds.</p>`),
+ SHOW(`<p><b>Major</b> = major 3rd + minor 3rd (4 + 3 half steps). <b>C major</b>: C E G.</p>`,chordNotes('C')),
+ SHOW(`<p><b>Minor</b> = minor 3rd + major 3rd (3 + 4). <b>C minor</b>: C Eb G. Only the middle note moved, and the mood flipped.</p>`,chordNotes('Cm')),
+ SHOW(`<p><b>Diminished</b> = minor 3rd + minor 3rd (3 + 3). <b>C diminished</b>: C Eb Gb. Tense and unstable.</p>`,chordNotes('Cdim')),
+ SHOW(`<p><b>Augmented</b> = major 3rd + major 3rd (4 + 4). <b>C augmented</b>: C E G#. Dreamy and unresolved.</p>`,chordNotes('Caug')),
+ PLAY(`<p>Play <b>C major</b>: C, E and G together.</p>`,{type:'pcs',pcs:chordPcs('C')}),
+ PLAY(`<p>Play <b>A minor</b>: A, C and E together.</p>`,{type:'pcs',pcs:chordPcs('Am')}),
+ PLAY(`<p>Play <b>any major triad</b> in root position: pick a root, add 4 half steps, then 3 more.</p>`,{type:'shape',iv:[0,4,7]}),
+ QUIZ('Which notes make D minor?',['D F# A','D F A','D F Ab','D E A'],1,'D minor: D, then a minor 3rd up (F), then a major 3rd up (A).'),
+ CHART(`<p>Every major and minor triad. Click any chord to hear it.</p>`,NN.flatMap(n=>[{name:n},{name:n+'m'}])),
+ PRACTICE_STEP(`<p>Play four triads in time.</p>`,['triads'])]},
+{id:'ch-diatonic',unit:'Chords',title:'Chords in a key and Roman numerals',min:15,steps:[
+ T(`<p>Build a triad on every note of a scale, using only notes from that scale, and you get the <b>seven chords of the key</b>. Musicians number them with Roman numerals: <b>upper case = major</b>, <b>lower case = minor</b>, <b>° = diminished</b>.</p>`),
+ CHART(`<p>The chords of <b>C major</b>.</p>`,diat('C','major').map(c=>({name:c.name,rn:c.rn}))),
+ T(`<p>Every major key has the same pattern: <b>I ii iii IV V vi vii°</b>. Learn the pattern once and it works in all 12 keys.</p>`),
+ CHART(`<p>The chords of <b>A minor</b>. Same chords as C major, starting from A.</p>`,diat('A','minor').map(c=>({name:c.name,rn:c.rn}))),
+ T(`<p>Every natural minor key follows <b>i ii° III iv v VI VII</b>.</p>`),
+ QUIZ('In C major, which chord is V?',['F','G','Am','Em'],1,'The 5th note of C major is G, and the triad on it (G B D) is major: G.'),
+ QUIZ('In A minor, which chord is VI?',['F','G','C','Dm'],0,'The 6th note of A minor is F. F A C is major: F.'),
+ QUIZ('In any major key, which chords are minor?',['I, IV and V','ii, iii and vi','IV and V','Only vi'],1,'ii, iii and vi are minor; I, IV and V are major; vii° is diminished.'),
+ PLAY(`<p>Play the <b>IV chord in C major</b>.</p>`,{type:'pcs',pcs:chordPcs('F')}),
+ CHART(`<p>One more key: <b>G major</b>.</p>`,diat('G','major').map(c=>({name:c.name,rn:c.rn})))]},
+{id:'ch-inversions',unit:'Chords',title:'Inversions and voice leading',min:12,steps:[
+ T(`<p>An <b>inversion</b> plays the same chord with a different note at the bottom. The chord keeps its name.</p>`),
+ SHOW(`<p><b>Root position</b>: the root on the bottom. C E G.</p>`,chordNotes('C',0)),
+ SHOW(`<p><b>1st inversion</b>: the 3rd on the bottom. E G C.</p>`,chordNotes('C',1)),
+ SHOW(`<p><b>2nd inversion</b>: the 5th on the bottom. G C E.</p>`,[55,60,64]),
+ T(`<p><b>Voice leading</b> means moving from chord to chord with as little hand movement as possible: keep shared notes where they are and move the others to the nearest note. On a 25-key keyboard this is how you play whole progressions without jumping around.</p>`),
+ PROG(`<p><b>Am – F – C – G</b> with smooth voicings. Watch how few keys change between chords.</p>`,[{name:'Am',ns:[57,60,64]},{name:'F',ns:[57,60,65]},{name:'C',ns:[55,60,64]},{name:'G',ns:[55,59,62]}]),
+ PLAY(`<p>Play <b>F in 1st inversion</b>: A on the bottom, then C and F.</p>`,{type:'pcs',pcs:chordPcs('F'),bass:9}),
+ QUIZ('C major with E on the bottom is…',['Root position','1st inversion','2nd inversion','C minor'],1,'The 3rd (E) on the bottom makes it 1st inversion.'),
+ PRACTICE_STEP(`<p>Play the progression in time.</p>`,['am-f-c-g'])]},
+{id:'ch-sevenths',unit:'Chords',title:'Seventh chords',min:12,steps:[
+ T(`<p>Stack one more 3rd on a triad and you get a <b>7th chord</b>: four notes, softer and richer. These are the sound of R&B and pluggnb.</p>`),
+ SHOW(`<p><b>Major 7</b> (Cmaj7): C E G B. Dreamy.</p>`,chordNotes('Cmaj7')),
+ SHOW(`<p><b>Dominant 7</b> (C7): C E G Bb. Bluesy, and it wants to resolve: C7 pulls towards F.</p>`,chordNotes('C7')),
+ SHOW(`<p><b>Minor 7</b> (Cm7): C Eb G Bb. Smooth.</p>`,chordNotes('Cm7')),
+ SHOW(`<p><b>Half-diminished</b> (Cm7b5): C Eb Gb Bb. The 7th chord built on vii in a major key.</p>`,chordNotes('Cm7b5')),
+ CHART(`<p>The seventh chords of <b>C major</b>.</p>`,[['Cmaj7','Imaj7'],['Dm7','ii7'],['Em7','iii7'],['Fmaj7','IVmaj7'],['G7','V7'],['Am7','vi7'],['Bm7b5','viiø7']].map(([name,rn])=>({name,rn}))),
+ PLAY(`<p>Play <b>Dm7</b>: D F A C.</p>`,{type:'pcs',pcs:chordPcs('Dm7')}),
+ QUIZ('Which seventh chord is built on V in a major key?',['Major 7','Dominant 7','Minor 7','Half-diminished'],1,'V7 is a dominant 7th: in C major, G7 (G B D F).'),
+ PRACTICE_STEP(`<p>Play four seventh chords in time.</p>`,['pluggnb-chords'])]},
+{id:'ch-color',unit:'Chords',title:'Colour chords: add9, sus, 6 and 9',min:12,steps:[
+ SHOW(`<p><b>add9</b>: a triad plus the 9th (the 2nd, an octave up). <b>Cadd9</b>: C E G D. Open and modern.</p>`,chordNotes('Cadd9')),
+ SHOW(`<p><b>sus2</b> and <b>sus4</b> replace the 3rd with the 2nd or the 4th, so the chord is neither major nor minor. <b>Csus2</b>: C D G.</p>`,chordNotes('Csus2')),
+ SHOW(`<p><b>Csus4</b>: C F G.</p>`,chordNotes('Csus4')),
+ SHOW(`<p><b>6</b>: a major triad plus the 6th. <b>C6</b>: C E G A. Warm, a little retro.</p>`,chordNotes('C6')),
+ SHOW(`<p><b>Minor 9</b>: a minor 7 plus the 9th. <b>Am9</b>: A C E G B. Lush: the classic R&B chord.</p>`,chordNotes('Am9')),
+ T(`<p><b>Rootless voicings</b>: in R&B the bass (or 808) plays the root, so the keys can leave it out and play the colour notes instead. Am9 without its A is C E G B, which is exactly the notes of Cmaj7. The bass note decides which chord you hear.</p>`),
+ QUIZ('Which notes are in Csus4?',['C E G','C D G','C F G','C Eb G'],2,'sus4 replaces the 3rd with the 4th: C F G.'),
+ PLAY(`<p>Play <b>Cadd9</b>: C, E, G and D.</p>`,{type:'pcs',pcs:chordPcs('Cadd9')})]},
+/* ---------------- Unit 5: Progressions ---------------- */
+{id:'pg-function',unit:'Progressions',title:'How progressions move',min:12,steps:[
+ T(`<p>Chords in a key have jobs. <b>Tonic</b> chords (I, vi, iii) feel like home. <b>Pre-dominant</b> chords (ii, IV) move away from home. <b>Dominant</b> chords (V, vii°) build tension that wants to return to I.</p>`),
+ PROG(`<p><b>I – IV – V – I</b> in C: home, away, tension, home.</p>`,['C','F','G','C'].map(name=>({name}))),
+ PROG(`<p><b>ii – V – I</b>, the core of jazz and a lot of R&B, here with 7ths: Dm7 – G7 – Cmaj7.</p>`,['Dm7','G7','Cmaj7'].map(name=>({name}))),
+ T(`<p>In natural minor, v is a minor chord, so its pull home is weak. Raise the 7th note (harmonic minor) and v becomes a <b>major V</b>. In A minor, Em becomes <b>E major</b>, and the pull back to Am gets much stronger.</p>`),
+ PROG(`<p><b>i – iv – V – i</b> in A minor: Am – Dm – E – Am.</p>`,['Am','Dm','E','Am'].map(name=>({name}))),
+ QUIZ('Which chord pulls most strongly back to I?',['IV','V','vi','iii'],1,'The dominant, V, creates the most tension towards I.'),
+ QUIZ('In A minor, raising G to G# turns the v chord (Em) into…',['E major','E diminished','G major','C augmented'],0,'E G B becomes E G# B: E major.')]},
+{id:'pg-common',unit:'Progressions',title:'Progressions in modern beats',min:12,steps:[
+ T(`<p>Most beats loop two to four chords. The same progression can sound like trap, R&B or pop depending on the sounds, the rhythm and the drums. These are starting points, not rules.</p>`),
+ PROG(`<p><b>i – VI – III – VII</b> in A minor: Am – F – C – G. Dark and driving.</p>`,['Am','F','C','G'].map(name=>({name}))),
+ PROG(`<p><b>i – VI</b>: Am – F. Two chords are often enough under a strong melody.</p>`,['Am','F'].map(name=>({name}))),
+ PROG(`<p><b>I – V – vi – IV</b> in C: C – G – Am – F. Bright pop and plugg.</p>`,['C','G','Am','F'].map(name=>({name}))),
+ PROG(`<p><b>IVmaj7 – iii7 – ii7 – Imaj7</b> in C: Fmaj7 – Em7 – Dm7 – Cmaj7. Soft and falling, common in pluggnb and R&B.</p>`,['Fmaj7','Em7','Dm7','Cmaj7'].map(name=>({name}))),
+ PROG(`<p><b>i – iv – v</b> in A minor: Am – Dm – Em. Bare and moody.</p>`,['Am','Dm','Em'].map(name=>({name}))),
+ T(`<p>Because Roman numerals describe positions in a key, you can move any of these to any key. Use the <a href="#keys">Key finder</a> to see the chords of any key.</p>`),
+ QUIZ('In A minor, the chords Am – F – C – G are numbered…',['i – VI – III – VII','I – V – vi – IV','i – iv – v – i','vi – IV – I – V'],0,'In A minor: Am is i, F is VI, C is III and G is VII.'),
+ PLAY(`<p>Play <b>Am, F, C, G</b> one after another, any voicing.</p>`,{type:'chordseq',chords:['Am','F','C','G'].map(chordPcs),names:['Am','F','C','G']})]},
+{id:'pg-borrowed',unit:'Progressions',title:'Borrowed chords',min:10,steps:[
+ T(`<p>A <b>borrowed chord</b> comes from the parallel key: same home note, other scale. Borrowing from C minor while in C major adds colour without leaving home.</p>`),
+ PROG(`<p><b>I – iv – I</b> in C: C – Fm – C. The minor iv is bittersweet.</p>`,['C','Fm','C'].map(name=>({name}))),
+ PROG(`<p><b>I – bVI – bVII – I</b> in C: C – Ab – Bb – C. Big and cinematic.</p>`,['C','Ab','Bb','C'].map(name=>({name}))),
+ T(`<p>It works the other way too. In A minor, a <b>D major</b> chord (borrowed from A Dorian, which raises the 6th to F#) brightens the loop.</p>`),
+ PROG(`<p><b>i – IV</b> in A minor: Am – D.</p>`,['Am','D','Am','D'].map(name=>({name}))),
+ QUIZ('In the key of C major, Fm is borrowed from…',['F major','C minor','A minor','G major'],1,'Fm is iv in C minor, the parallel minor of C major.')]},
+/* ---------------- Unit 6: Rhythm ---------------- */
+{id:'rh-basics',unit:'Rhythm',title:'Beats, bars and note values',min:10,steps:[
+ T(`<p><b>Tempo</b> is measured in BPM, beats per minute. In <b>4/4</b>, the time signature of almost every beat, a <b>bar</b> holds four beats. A quarter note lasts one beat, an 8th note half a beat, a 16th note a quarter of a beat.</p><p>At 140 BPM one beat lasts 60 ÷ 140 ≈ 0.43 seconds.</p>`),
+ GRID(`<p><b>Quarter notes</b>: one hit per beat, counted 1 2 3 4.</p>`,[0,4,8,12]),
+ GRID(`<p><b>8th notes</b>: two per beat, counted 1 & 2 & 3 & 4 &.</p>`,[0,2,4,6,8,10,12,14]),
+ GRID(`<p><b>16th notes</b>: four per beat, counted 1 e & a 2 e & a…</p>`,[...Array(16).keys()]),
+ QUIZ('How many 16th notes fit in one bar of 4/4?',['4','8','12','16'],3,'Four beats × four 16ths = 16.'),
+ QUIZ('By default, one step in FL\'s Channel Rack equals…',['A bar','A beat','An 8th note','A 16th note'],3,'The default 16 steps per pattern make one bar, so one step is a 16th note.')]},
+{id:'rh-feel',unit:'Rhythm',title:'Half-time, triplets, swing and syncopation',min:12,steps:[
+ GRID(`<p><b>Normal feel</b> at 140 BPM: kick on beats 1 and 3, snare on beats <b>2 and 4</b> (steps 5 and 13).</p>`,[0,8],{snare:[4,12]}),
+ GRID(`<p><b>Half-time</b>: the snare moves to <b>beat 3</b> (step 9). Same tempo, but it feels half as fast. Trap and rage live here.</p>`,[0],{snare:[8]}),
+ T(`<p>A <b>triplet</b> is three evenly spaced notes in the time of two notes of the same value. Hi-hat triplet rolls are a trap signature. In FL's piano roll, set the snap to <b>1/6 beat</b> for 16th-note triplets, or <b>1/3 step</b> for faster 32nd-note triplets.</p>`),
+ GRID(`<p><b>Swing</b> delays every second 16th a little. This grid has the swing turned up: listen to it loosen up. FL's Channel Rack has the same Swing knob.</p>`,[0,8],{snare:[4,12],swing:.5,bpm:90}),
+ T(`<p><b>Syncopation</b> means accents off the beat: an 808 on the "and" of 2, a kick a 16th before beat 3. It is what makes a groove bounce.</p>`),
+ QUIZ('Half-time feel puts the snare on…',['Beat 1','Beats 2 and 4','Beat 3','Every beat'],2,'Half-time moves the backbeat to beat 3.'),
+ QUIZ('Three evenly spaced notes in the time of two notes of the same value are…',['A dotted rhythm','A triplet','Swing','Syncopation'],1,'That is the definition of a triplet.'),
+ PRACTICE_STEP(`<p>Play half-time kick and snare on the pads.</p>`,['half-time','trap-groove'])]},
+/* ---------------- Unit 7: Melody and bass ---------------- */
+{id:'ml-melody',unit:'Melody and bass',title:'Writing melodies',min:15,steps:[
+ T(`<p>Five habits make melodies work:</p><ol class="steps"><li><b>Chord tones on strong beats</b>: on beats 1 and 3, land on a note of the chord underneath.</li><li><b>Passing notes in between</b>: scale notes connect the chord tones.</li><li><b>Shape</b>: rise to a high point, then come back down.</li><li><b>Repeat</b>: a short idea played again is a hook.</li><li><b>Call and answer</b>: play a phrase, then repeat it with a different ending.</li></ol>`),
+ SHOW(`<p>Over an <b>A minor</b> chord, the chord tones <b>A, C and E</b> are the safest notes to land on.</p>`,[57,60,64,69,72,76],{play:'arp',spread:.2}),
+ QUIZ('Over an Am chord, which notes are strongest to land on?',['A, C and E','B, D and F','F, G and B','C#, E and G#'],0,'A, C and E are the notes of the chord.'),
+ PLAY(`<p>Play any <b>four notes</b> using only A, C and E, in any order or octave.</p>`,{type:'set',pcs:[9,0,4],count:4}),
+ PRACTICE_STEP(`<p>Play a four-bar call-and-answer hook in time.</p>`,['hook'])]},
+{id:'ml-bass',unit:'Melody and bass',title:'Bass lines and 808s',min:12,steps:[
+ T(`<p>Most of the time the bass, or the 808, plays the <b>root</b> of each chord, usually an octave or two below it. Three tricks make it move:</p><ul><li><b>Octave jumps</b>: the same note an octave up for a moment.</li><li><b>Approach notes</b>: a note a step above or below the next root, just before the chord changes.</li><li><b>Rhythm</b>: line the bass up with the kick, then add a few hits between.</li></ul><p>An 808 plays one note at a time, so make it mono in FL: open the channel settings, go to the MISC tab and turn on Mono under Polyphony.</p>`),
+ PROG(`<p>Am – F – C – G with the bass on the roots.</p>`,['Am','F','C','G'].map(name=>({name}))),
+ QUIZ('Most of the time, an 808 plays…',['The root of each chord','The 3rd of each chord','The 7th','Random scale notes'],0,'The root anchors the chord.'),
+ PLAY(`<p>Play the <b>roots</b> of Am – F – C – G: A, F, C, G.</p>`,{type:'seqpc',pcs:[9,5,0,7]}),
+ PRACTICE_STEP(`<p>Play an 808 line with octave jumps in time.</p>`,['roots-808'])]}
 ];
-function bindTheory(){
- if($('#kbNotes')){$$('[data-show]').forEach(b=>b.onclick=()=>{const t=b.dataset.show;const ms=[];for(let m=48;m<=72;m++){if(t==='white'&&!isBlack(m))ms.push(m);if(t==='black'&&isBlack(m))ms.push(m);if(t==='c'&&m%12===0)ms.push(m)}kbShow('kbNotes',ms,true);playMs(t==='c'?ms:ms.slice(0,8),.12,.5)})}
- if($('#kbScale')){const show=play=>{const r=+ddVal('scRoot'),sc=SCALES[ddVal('scType')];const ms=sc.map(x=>48+r+x).concat([60+r]).map(m=>m>72?m-12:m);kbShow('kbScale',ms,true);const steps=[];const full=sc.concat([12]);for(let i=1;i<full.length;i++){const d=full[i]-full[i-1];steps.push(d===1?'H':d===2?'W':d===3?'W+H':d+'')}$('#scSteps').textContent=`${NN[r]} ${ddVal('scType')}: ${sc.map(x=>NN[(r+x)%12]).join(' ')}  ·  steps ${steps.join(' ')}`;if(play)playMs(sc.map(x=>60+r+x).concat([72+r]),.22,.4)};show(false);['scRoot','scType'].forEach(i=>ddOn(i,()=>show(true)));$('#scPlay').onclick=()=>show(true)}
- if($('#kbChord')){const show=play=>{const r=+ddVal('chRoot'),q=ddVal('chQual'),inv=+ddVal('chInv');let ms=QUAL[q].map(x=>57+((r-9+12)%12)+x);for(let i=0;i<inv;i++){ms.push(ms.shift()+12)}while(Math.max(...ms)>72)ms=ms.map(m=>m-12);while(Math.min(...ms)<48)ms=ms.map(m=>m+12);kbShow('kbChord',ms,true);
-   $('#chInfo').textContent=`${NN[r]}${QSYM[q]}: ${ms.map(m=>NN[m%12]).join(' ')}. Half steps from the root: ${QUAL[q].join(', ')}.`;if(play)playMs(ms,0,1.4)};show(false);['chRoot','chQual','chInv'].forEach(i=>ddOn(i,()=>show(true)));$('#chPlay').onclick=()=>show(true)}
- if($('#pgChords')){const COMMON={'Natural minor':[['i – VI – III – VII',[0,5,2,6],'Dark and driving: a lot of trap and rage'],['i – iv – v',[0,3,4],'Bare and moody'],['i – VII – VI – VII',[0,6,5,6],'Rocking back and forth']],'Major':[['I – V – vi – IV',[0,4,5,3],'Pop and plugg'],['IV – iii – ii – I',[3,2,1,0],'Soft and descending: pluggnb with 7ths'],['ii – V – I',[1,4,0],'Jazz and R&B resolution']]};
-  const chordsIn=()=>{const r=+ddVal('pgRoot'),t=ddVal('pgType'),sc=SCALES[t];return sc.map((_,d)=>{const ns=[0,2,4].map(o=>{const ix=d+o;return r+sc[ix%7]+12*Math.floor(ix/7)});const iv=[ns[1]-ns[0],ns[2]-ns[0]];const q=iv[0]===4?'':iv[1]===6?'°':'m';const rn=['I','II','III','IV','V','VI','VII'][d];return{name:NN[ns[0]%12]+(q==='m'?'m':q==='°'?'dim':''),rn:q===''?rn:rn.toLowerCase()+(q==='°'?'°':''),ms:ns.map(m=>{let x=m+48;while(x>67)x-=12;return x})}})};
-  const draw=()=>{const cs=chordsIn();const box=$('#pgChords');box.innerHTML=cs.map((c,i)=>`<button class="chordbtn" data-pg="${i}">${c.name}<small>${c.rn}</small></button>`).join('');$$('[data-pg]',box).forEach(b=>b.onclick=()=>{const c=cs[+b.dataset.pg];kbShow('kbProg',c.ms,true);playMs(c.ms,0,1.2);$$('.chordbtn',box).forEach(x=>x.classList.toggle('now',x===b))});
-   const t=ddVal('pgType');$('#pgCommon').innerHTML=COMMON[t].map(([n,idx,d],k)=>`<button class="lrow" data-cp="${k}" style="width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--rule);font:inherit;cursor:pointer"><span class="t">${n}</span><span class="d">${idx.map(i=>cs[i].name).join(' – ')} · ${d}</span><span class="r">Play</span></button>`).join('');
-   $$('[data-cp]').forEach(b=>b.onclick=()=>{const idx=COMMON[t][+b.dataset.cp][1];audio();idx.forEach((ci,k)=>{const c=cs[ci];setTimeout(()=>{kbShow('kbProg',c.ms,true);playMs(c.ms,0,1)},k*1000)})})};draw();['pgRoot','pgType'].forEach(i=>ddOn(i,draw))}
- if($('#rgGrid')){const lane=$('#rgGrid');let on=false,timer=null;$$('.rg',lane).forEach(b=>b.onclick=()=>{b.classList.toggle('on');b.setAttribute('aria-pressed',b.classList.contains('on'));audio();DR.Snare(ctx.currentTime,.7)});
-  $('#rgPlay').onclick=()=>{if(on){clearInterval(timer);on=false;$('#rgPlay').textContent='Play';$$('.rg',lane).forEach(x=>x.classList.remove('now'));return}audio();on=true;$('#rgPlay').textContent='Stop';let step=0,next=ctx.currentTime+.05;timer=setInterval(()=>{const bpm=+ddVal('rgBpm'),sd=60/bpm/4,sw=+$('#rgSwing').value;while(next<ctx.currentTime+.1){const i=step%16;const t=next+(i%2?sw*sd*.5:0);const btns=$$('.rg',lane);if(btns[i]&&btns[i].classList.contains('on'))DR[i%8===0&&i===0?'Kick':'Snare'](t,1);DR.Hat(t,i%2?.35:.6);const ii=i;setTimeout(()=>{$$('.rg',lane).forEach((x,k)=>x.classList.toggle('now',k===ii))},Math.max(0,(t-ctx.currentTime)*1000));next+=sd;step++}},25)}}
-}
+TC.forEach(l=>{l.mod=l.unit;l.title=(t=>()=>t)(l.title);l.theory=true});
+const TCMAP=Object.fromEntries(TC.map(l=>[l.id,l]));
+const TRACK_THEORY=TC.map(l=>l.id);
+const ESSENTIALS=['tk-keys','sc-major','sc-minor','ch-triads','ch-diatonic','ch-inversions','rh-feel'];
+
+/* ================= guided lesson player ================= */
+const TS={l:null,i:0,listener:null,recent:[],ok:false,seqIdx:0,answered:null,timers:[]};
+const miniKb=(ns,start=48,count=37)=>`<div class="mini-kb">${keysHtml(start,count,false).replace(/data-m="(\d+)"/g,(m0,m)=>`data-m="${m}"${ns.includes(+m)?' data-on="1"':''}`)}</div>`;
+function tsClearTimers(){TS.timers.forEach(clearTimeout);TS.timers=[]}
+function tsKb(ns,labels=true){kbShow('tsKb',ns,labels?(m=>nn(m)):null)}
+function tsStepHtml(st){
+ if(st.k==='text')return st.html;
+ if(st.k==='show')return st.html+`<div class="row" style="margin-top:10px"><button class="btn" data-ts-replay>Play again</button></div>`;
+ if(st.k==='play')return st.html+`<div class="ts-check" id="tsCheck" role="status" aria-live="polite">${midiSupported()&&MIDI.state!=='on'?'Play it on your keyboard (connect it in the bottom bar), on the keys below, or with the letter keys.':'Play it on your keyboard, on the keys below, or with the letter keys.'}</div><div class="row" style="margin-top:10px"><button class="btn" data-ts-hint>Show me</button></div>`;
+ if(st.k==='quiz')return `<p class="ts-q">${st.q}</p>${st.sound?`<div class="row" style="margin-bottom:10px"><button class="btn" data-ts-sound>Play the sound</button></div>`:''}<div class="ts-opts">${st.opts.map((o,i)=>`<button class="ts-opt" data-opt="${i}">${o}</button>`).join('')}</div><p class="ts-why" id="tsWhy" role="status" aria-live="polite"></p>`;
+ if(st.k==='chart')return st.html+`<div class="chart-grid">${st.items.map((c,i)=>{const ns=chordNotes(c.name);return `<button class="chart-card" data-chart="${i}"><span class="cn">${c.name}</span>${c.rn?`<span class="rn">${c.rn}</span>`:''}${miniKb(ns)}<span class="cnotes">${ns.map(nn).join(' ')}</span></button>`}).join('')}</div>`;
+ if(st.k==='prog')return st.html+`<div class="chordrow">${st.chords.map((c,i)=>`<button class="chordbtn" data-pc="${i}">${c.name}${st.romans?`<small>${st.romans[i]}</small>`:''}</button>`).join('')}</div><div class="row" style="margin-top:10px"><button class="btn primary" data-ts-prog>Play the progression</button></div>`;
+ if(st.k==='grid')return st.html+`<div class="rgrid" id="tsGrid">${Array.from({length:16},(_,i)=>`<button class="rg ${st.on.includes(i)?'on':''} ${st.snare.includes(i)?'sn':''}" data-i="${i}" aria-label="Step ${i+1}"><b>${['1','e','&','a'][i%4]==='1'?(i/4+1):['1','e','&','a'][i%4]}</b></button>`).join('')}</div><div class="row" style="margin-top:10px"><button class="btn primary" data-ts-grid>Play</button><span class="small muted">${st.bpm} BPM. Orange = kick, dark = snare. Click steps to change them.</span></div>`;
+ if(st.k==='practice')return st.html+practiceCard(st.ids);
+ return ''}
+const progNotes=c=>c.ns||chordNotes(c.name);
+function tsPlayProg(st){tsClearTimers();audio();st.chords.forEach((c,k)=>{TS.timers.push(setTimeout(()=>{const ns=progNotes(c);tsKb(ns);playMs(ns,0,1.05,.65);if(st.bass){const r=Math.min(...ns);let b=r-((r-parseChord(c.name).pc)%12+12)%12-12;if(b<36)b+=12;playMs([b],0,1.05,.7)}$$('[data-pc]').forEach((x,j)=>x.classList.toggle('now',j===k))},k*1100))})}
+let tsGridTimer=null;
+function tsStopGrid(){clearInterval(tsGridTimer);tsGridTimer=null;$$('#tsGrid .rg').forEach(x=>x.classList.remove('now'));const b=$('[data-ts-grid]');if(b)b.textContent='Play'}
+function tsPlayGrid(st){if(tsGridTimer){tsStopGrid();return}audio();let step=0,next=ctx.currentTime+.05;$('[data-ts-grid]').textContent='Stop';tsGridTimer=setInterval(()=>{const sd=60/st.bpm/4;while(next<ctx.currentTime+.1){const i=step%16;const t=next+(i%2?st.swing*sd*.5:0);const b=$$('#tsGrid .rg')[i];if(b){if(b.classList.contains('sn'))DR.Snare(t,1);else if(b.classList.contains('on'))DR.Kick(t,1)}DR.Hat(t,i%2?.3:.5);const ii=i;setTimeout(()=>$$('#tsGrid .rg').forEach((x,k)=>x.classList.toggle('now',k===ii)),Math.max(0,(t-ctx.currentTime)*1000));next+=sd;step++}},25)}
+function tsEnter(){const st=TS.l.steps[TS.i];tsClearTimers();tsStopGrid();TS.ok=false;TS.recent=[];TS.seqIdx=0;TS.answered=null;
+ const body=$('#tsBody');body.innerHTML=tsStepHtml(st);body.style.animation='none';void body.offsetWidth;body.style.animation='rise .3s cubic-bezier(.2,.8,.2,1)';
+ $$('.ts-dot').forEach((d,k)=>{d.classList.toggle('on',k===TS.i);d.classList.toggle('done',k<TS.i)});$('#tsCount').textContent=`Step ${TS.i+1} of ${TS.l.steps.length}`;
+ tsKb([]);if(st.k==='show'){tsKb(st.notes);st.play==='arp'?playMs(st.notes,st.spread||.25,1,.65):playMs(st.notes,0,1.5,.65)}
+ if(st.k==='prog')tsPlayProg(st);
+ if(st.k==='quiz'&&st.sound)playMs(st.sound,.5,1,.65);
+ if(st.k==='chart'){const first=st.items[0];if(first)tsKb(chordNotes(first.name))}
+ mountFigs(body);bindRack(body);tsNav();
+ body.querySelector('[data-ts-replay]')?.addEventListener('click',()=>{tsKb(st.notes);st.play==='arp'?playMs(st.notes,st.spread||.25,1,.65):playMs(st.notes,0,1.5,.65)});
+ body.querySelector('[data-ts-sound]')?.addEventListener('click',()=>playMs(st.sound,.5,1,.65));
+ body.querySelector('[data-ts-prog]')?.addEventListener('click',()=>tsPlayProg(st));
+ $$('[data-pc]',body).forEach(b=>b.onclick=()=>{const c=st.chords[+b.dataset.pc];const ns=progNotes(c);tsKb(ns);playMs(ns,0,1.2,.65);$$('[data-pc]',body).forEach(x=>x.classList.toggle('now',x===b))});
+ $$('[data-chart]',body).forEach(b=>b.onclick=()=>{const c=st.items[+b.dataset.chart];const ns=chordNotes(c.name);tsKb(ns);playMs(ns,0,1.3,.65);$$('[data-chart]',body).forEach(x=>x.classList.toggle('now',x===b))});
+ body.querySelector('[data-ts-grid]')?.addEventListener('click',()=>tsPlayGrid(st));
+ $$('#tsGrid .rg',body).forEach(b=>b.onclick=()=>{if(b.classList.contains('sn')){b.classList.remove('sn','on')}else if(b.classList.contains('on')){b.classList.remove('on');b.classList.add('sn')}else b.classList.add('on');audio();(b.classList.contains('sn')?DR.Snare:b.classList.contains('on')?DR.Kick:DR.Hat)(ctx.currentTime,.8)});
+ body.querySelector('[data-ts-hint]')?.addEventListener('click',()=>{const t=st.target;let ns=[];if(t.type==='note')ns=[60+t.pc];else if(t.type==='seq')ns=t.notes;else if(t.type==='pcs'){ns=t.pcs.map(p=>60+p).sort((a,b)=>a-b);if(t.bass!=null){const b=48+t.bass;ns=[b,...ns.filter(n=>n%12!==t.bass).map(n=>n<b?n+12:n)]}}else if(t.type==='shape')ns=t.iv.map(x=>60+x);else if(t.type==='chordseq')ns=t.chords[TS.seqIdx].map(p=>60+p);else if(t.type==='seqpc')ns=t.pcs.map(p=>48+p);else if(t.type==='set')ns=t.pcs.map(p=>60+p);tsKb(ns);playMs(ns,t.type==='seq'||t.type==='seqpc'?.3:0,1,.6)});
+ $$('[data-opt]',body).forEach(b=>b.onclick=()=>{if(TS.answered!=null||b.classList.contains('wrong'))return;const k=+b.dataset.opt;const right=k===st.ans;b.classList.add(right?'right':'wrong');if(!right){$('#tsWhy').innerHTML='<b>Not quite.</b> Try again.';return}TS.answered=k;$$('[data-opt]',body).forEach(x=>x.disabled=true);$('#tsWhy').innerHTML=`<b>Correct.</b> ${st.why}`;TS.ok=true;tsNav()})}
+function tsNav(){const st=TS.l.steps[TS.i];const last=TS.i===TS.l.steps.length-1;const nb=$('#tsNext'),bb=$('#tsBack');bb.disabled=TS.i===0;
+ const gate=(st.k==='play'&&!TS.ok)||(st.k==='quiz'&&TS.answered==null);nb.textContent=last?'Finish lesson':'Next';nb.disabled=gate;const sk=$('#tsSkip');sk.hidden=!(st.k==='play'&&!TS.ok)}
+function tsSuccess(msg){TS.ok=true;const c=$('#tsCheck');if(c){c.classList.add('ok');c.innerHTML=`<b>Nice.</b> ${msg||'That is right.'}`}tsNav()}
+function tsHeld(){const now=performance.now();TS.recent=TS.recent.filter(r=>now-r.t<1300||MIDI.down.has(r.m));const ms=[...new Set(TS.recent.map(r=>r.m))];return ms}
+function tsGroups(k){const held=[...MIDI.down];const rec=[];for(let i=TS.recent.length-1;i>=0&&rec.length<k;i--){const m=TS.recent[i].m;if(!rec.includes(m))rec.push(m)}tsHeld();return [held,rec].filter(g=>g.length===k||g===held)}
+function tsOnNote(n){const st=TS.l&&TS.l.steps[TS.i];if(!st||st.k!=='play'||TS.ok||n.note==null)return;const t=st.target;TS.recent.push({m:n.note,t:performance.now()});TS.hist=(TS.hist||[]).concat(n.note).slice(-16);const pcs=m=>((m%12)+12)%12;
+ if(t.type==='note'){if(pcs(n.note)===t.pc)tsSuccess();return}
+ if(t.type==='seq'){const k=t.notes.length,h=TS.hist.slice(-k);if(h.length===k&&pcs(h[0])===pcs(t.notes[0])&&h.every((m,i)=>!i||m-h[i-1]===t.notes[i]-t.notes[i-1]))tsSuccess();return}
+ if(t.type==='seqpc'){const k=t.pcs.length,h=TS.hist.slice(-k);if(h.length===k&&h.every((m,i)=>pcs(m)===t.pcs[i]))tsSuccess();return}
+ if(t.type==='set'){const h=TS.hist.slice(-t.count);if(h.length===t.count&&h.every(m=>t.pcs.includes(pcs(m))))tsSuccess();return}
+ const k=t.type==='pcs'?t.pcs.length:t.type==='shape'?t.iv.length:t.chords[TS.seqIdx].length;
+ for(const held of tsGroups(k)){if(TS.ok)return;const set=[...new Set(held.map(pcs))].sort((a,b)=>a-b);
+ if(t.type==='pcs'){const want=[...t.pcs].sort((a,b)=>a-b);if(set.length===want.length&&set.every((p,i)=>p===want[i])){if(t.bass!=null&&pcs(Math.min(...held))!==t.bass){const c=$('#tsCheck');if(c)c.innerHTML='Right notes. Now put <b>'+NN[t.bass]+'</b> on the bottom.';continue}tsSuccess();return}continue}
+ if(t.type==='shape'){const u=[...new Set(held)].sort((a,b)=>a-b);if(u.length===t.iv.length&&u.every((m,i)=>m-u[0]===t.iv[i])){tsSuccess();return}continue}
+ if(t.type==='chordseq'){const want=[...t.chords[TS.seqIdx]].sort((a,b)=>a-b);if(set.length===want.length&&set.every((p,i)=>p===want[i])){TS.seqIdx++;TS.recent=[];const c=$('#tsCheck');if(TS.seqIdx>=t.chords.length)tsSuccess('All four chords, in order.');else if(c)c.innerHTML=`<b>${t.names[TS.seqIdx-1]}</b> done. Next: <b>${t.names[TS.seqIdx]}</b>.`;return}}}}
+function viewTheoryLesson(l){TS.l=l;TS.i=0;const tr=trackOf(l.id);const list=TRACKS[tr];const idx=list.indexOf(l.id);const prev=LMAP[list[idx-1]],next=LMAP[list[idx+1]];
+ render(`${crumb([tr==='theory'?'Music theory':'Course','#'+(tr==='theory'?'theory':'home')],l.unit)}<h1>${l.title()}</h1><p class="small muted" style="margin-top:6px">${l.min} min · ${l.steps.length} steps</p>
+<div class="ts" data-typing><div class="ts-dots" aria-hidden="true">${l.steps.map(()=>'<i class="ts-dot"></i>').join('')}</div><div class="small muted tnum" id="tsCount"></div>
+<div class="ts-body" id="tsBody"></div>
+${fit(`<div class="hw" data-ui style="width:1060px;padding:12px"><div class="hw-keys kbw" id="tsKb" style="margin:0;height:130px">${keysHtml(48,37,true)}</div></div>`,1060)}
+<div class="ts-nav"><button class="btn" id="tsBack">Back</button><span class="spacer"></span><button class="btn" id="tsSkip" hidden>Skip</button><button class="btn primary" id="tsNext">Next</button></div></div>
+<div class="lessonnav"><div>${prev?`<a class="btn" href="#lesson-${prev.id}">Back: ${prev.title()}</a>`:''}</div><div>${next?`<a class="btn" href="#lesson-${next.id}">Next lesson: ${next.title()}</a>`:''}</div></div>`);
+ bindKeys(V);if(TS.listener)MIDI.listeners.delete(TS.listener);TS.listener={onNote:tsOnNote};MIDI.listeners.add(TS.listener);
+ $('#tsBack').onclick=()=>{if(TS.i>0){TS.i--;tsEnter()}};$('#tsSkip').onclick=()=>{TS.ok=true;tsNav();TS.i++;tsEnter()};
+ $('#tsNext').onclick=()=>{if(TS.i<l.steps.length-1){TS.i++;tsEnter()}else{done[l.id]=true;store.set('done',done);renderNav();toast('Lesson complete');location.hash=next?'#lesson-'+next.id:'#'+(tr==='theory'?'theory':'home')}};
+ tsEnter()}
+/* ================= tracks ================= */
+const TRACKS={production:null,theory:TRACK_THEORY};
+function trackOf(id){const cur=prof.track||'production';if(TRACKS[cur].includes(id))return cur;return TRACKS.theory.includes(id)?'theory':'production'}
+function viewTheoryHome(){prof.track='theory';saveProf();renderNav();const units=[...new Set(TC.map(l=>l.unit))];const n=TC.filter(l=>done[l.id]).length;const next=TC.find(l=>!done[l.id])||TC[0];
+ render(`${crumb('Music theory')}<h1>Music theory</h1><p class="lede">A complete course on its own: the keyboard, scales, intervals, chords, progressions, rhythm, melody and bass. Every lesson walks you through one step at a time, plays everything for you, checks what you play on your keyboard, and ends with a short quiz or a practice run.</p>
+<div class="next"><div><div class="k">${n?`${n} of ${TC.length} lessons done`:'Start here'}</div><div class="t">${next.title()}</div></div><a class="btn primary" href="#lesson-${next.id}">${n?'Continue':'Start'}</a></div>
+${units.map(u=>`<h2>${u}</h2><div class="list">${TC.filter(l=>l.unit===u).map(l=>`<a class="lrow" href="#lesson-${l.id}"><span class="t">${l.title()}</span><span class="d">${l.steps.length} steps · ${l.min} min</span><span class="r">${done[l.id]?'<span class="ok">Done</span>':''}</span></a>`).join('')}</div>`).join('')}`)}
 
 /* ================= lessons ================= */
 const demoDrums=[{name:'Kick',lane:'Kick',pat:'x.....x...x.....',color:'#ff7a59',trk:1},{name:'Clap',lane:'Snare',pat:'........x.......',color:'#ffcf5a',trk:2},{name:'Hat',lane:'Hat',pat:'x.x.x.x.x.x.rrx.',color:'#7fd1ff',trk:3},{name:'Open hat',lane:'Open',pat:'..............x.',color:'#a28bff',trk:4}];
@@ -632,7 +899,7 @@ ${hwFig()}
 <h2>How the course works</h2>
 <ol class="steps">
 <li><b>Set up</b> FL Studio, audio and ${midiMode()?'your keyboard':'the typing keyboard'} (lessons 1–2).</li>
-<li><b>Learn the windows</b> with drawn FL screens that point at every button you need (lesson 3), then just enough theory to play chords on 25 keys (lesson 4).</li>
+<li><b>Learn the windows</b> with drawn FL screens that point at every button you need, then the music theory essentials: guided lessons that play every chord and scale for you and check what you play. For the full theory course, switch to <a href="#theory">Music theory</a> in the sidebar.</li>
 <li><b>Build each layer</b>: drums, 808s, melodies, arrangement and mixing (lessons 5–9).</li>
 <li><b>Make real beats</b> with the <a href="#beats">Beat recipes</a>: each one opens as FL windows that play, using sounds from your plugins.</li>
 </ol>
@@ -816,7 +1083,6 @@ ${tip('Selling basics','Use a licence (lease vs exclusive). Only sell beats wher
 <p>One per day. Speed comes from repetition, not more plugins.</p>
 <ol class="steps"><li><b>10-minute beat.</b> Timer on. Drums, 808, one melody. Export no matter what.</li><li><b>Chord copy.</b> Find a song's chords by ear on ${midiMode()?'your keyboard':'the typing keyboard'}; check with the <a href="#keys">Key finder</a>.</li><li><b>One recipe, three ways.</b> Keep a <a href="#beats">recipe</a>'s chords, change tempo and drums into another style.</li><li><b>Pad drumming.</b> ${midiMode()?'Play a whole drum pattern live, no quantize. Fix only what is clearly wrong.':'Program a pattern where no bar is exactly like the last.'}</li><li><b>3 leads from scratch</b> in ${pick(['vital','sytrus','3xosc']).p.n}. Save them as presets.</li><li><b>Mix someone else's stems.</b> Free stem packs teach mixing fast.</li></ol>`}
 ];
-LESSONS.splice(LESSONS.findIndex(l=>l.id==='drums'),0,...THEORY);
 const LMAP=Object.fromEntries(LESSONS.map(l=>[l.id,l]));
 let done=store.get('done',{});
 
@@ -951,23 +1217,23 @@ const seqNotes=(ms,step=1,d=.9,start=0)=>ms.map((m,i)=>({t:start+i*step,d,m}));
 const chordsAt=(list,len=4)=>list.flatMap((ns,i)=>ns.map(m=>({t:i*len,d:len*.95,m})));
 const padsFrom=(pat,bars=1,lane)=>{const out=[];for(let b=0;b<bars;b++)[...pat].forEach((c,i)=>{if(c!=='.')out.push({t:b*4+i/4,d:.2,lane,roll:c==='r'})});return out};
 const EXERCISES=[
- {id:'find-c',unit:'theory',title:'Find every C',kind:'keys',bpm:70,wait:true,lesson:'notes',
+ {id:'find-c',unit:'theory',title:'Find every C',kind:'keys',bpm:70,wait:true,lesson:'tk-keys',
   about:'C is the white key just left of each group of two black keys. Play the three Cs on your keyboard, low to high and back.',notes:seqNotes([48,60,72,60,48],2,1.5)},
- {id:'c-major',unit:'theory',title:'C major scale',kind:'keys',bpm:80,lesson:'scales',
+ {id:'c-major',unit:'theory',title:'C major scale',kind:'keys',bpm:80,lesson:'sc-major',
   about:'All white keys from C to C: whole, whole, half, whole, whole, whole, half. Up one octave and back down.',notes:seqNotes([60,62,64,65,67,69,71,72,71,69,67,65,64,62,60])},
- {id:'a-minor',unit:'theory',title:'A minor scale',kind:'keys',bpm:80,lesson:'scales',
+ {id:'a-minor',unit:'theory',title:'A minor scale',kind:'keys',bpm:80,lesson:'sc-minor',
   about:'The same white keys, starting on A: whole, half, whole, whole, half, whole, whole. This is natural minor, the darkest common scale in trap.',notes:seqNotes([57,59,60,62,64,65,67,69,67,65,64,62,60,59,57])},
- {id:'triads',unit:'theory',title:'Four triads',kind:'keys',bpm:80,lesson:'chords',
+ {id:'triads',unit:'theory',title:'Four triads',kind:'keys',bpm:80,lesson:'ch-triads',
   about:'C major (C E G), F major (F A C), G major (G B D), A minor (A C E). Each held for a bar. Press all three notes together.',notes:chordsAt([[60,64,67],[65,69,72],[67,71,74],[57,60,64]])},
- {id:'am-f-c-g',unit:'theory',title:'Am – F – C – G with smooth voicings',kind:'keys',bpm:90,lesson:'progressions',
+ {id:'am-f-c-g',unit:'theory',title:'Am – F – C – G with smooth voicings',kind:'keys',bpm:90,lesson:'ch-inversions',
   about:'The progression from the theory lesson, voiced so your hand barely moves: A C E, F A C, E G C, D G B.',notes:chordsAt([[57,60,64],[53,57,60],[52,55,60],[50,55,59]])},
- {id:'hook',unit:'theory',title:'Call and answer hook',kind:'keys',bpm:90,lesson:'melody',
+ {id:'hook',unit:'theory',title:'Call and answer hook',kind:'keys',bpm:90,lesson:'ml-melody',
   about:'A four-bar hook in A minor. Bars 1–2 ask a question, bars 3–4 answer it with a different ending that lands on A.',
   notes:[[0,69],[1,72],[1.5,74],[2,72],[4,76],[5,74],[5.5,72],[6,69],[8,69],[9,72],[9.5,74],[10,72],[12,71],[13,67],[13.5,69],[14,69]].map(([t,m],i,a)=>({t,m,d:Math.min(.9,((a[i+1]||[16])[0]-t)*.9)}))},
  {id:'roots-808',unit:'beat',title:'808 roots with an octave jump',kind:'keys',bpm:80,lesson:'808',
   about:'The Rage anthem bassline in F# minor: hold each chord root, then jump up an octave on the last 8th of the bar. Play it an octave lower on your keyboard (Oct −) for the real 808 range.',
   notes:[[0,54,3.4],[3.5,66,.45],[4,50,3.4],[7.5,62,.45],[8,52,3.4],[11.5,64,.45],[12,49,3.4],[15.5,61,.45]].map(([t,m,d])=>({t,m,d}))},
- {id:'pluggnb-chords',unit:'beat',title:'Pluggnb seventh chords',kind:'keys',bpm:75,lesson:'melody',
+ {id:'pluggnb-chords',unit:'beat',title:'Pluggnb seventh chords',kind:'keys',bpm:75,lesson:'ch-sevenths',
   about:'Gbmaj7, Fm7, Ebm7 and Ab(add9) from the Pluggnb recipe. Four notes each, a bar each.',notes:chordsAt([[54,58,61,65],[53,56,60,63],[51,54,58,61],[56,60,63,70]])},
  {id:'half-time',unit:'beat',title:'Kick and snare, half-time',kind:'pads',bpm:120,lesson:'drums',
   about:'Kick on beat 1, snare on beat 3. This is the half-time feel of trap. Kick on pad 1 (or A), snare on pad 2 (or S).',notes:[...padsFrom('x...............',4,0),...padsFrom('........x.......',4,1)]},
@@ -984,26 +1250,28 @@ const starsFor=acc=>acc>=95?3:acc>=80?2:acc>=60?1:0;
 const starHtml=n=>`<span class="stars" aria-label="${n} of 3 stars">${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</span>`;
 function practiceCard(ids){const ex=ids.map(i=>EXMAP[i]).filter(Boolean);if(!ex.length)return'';return `<div class="practice-card"><div><div class="k">Practice</div>${ex.map(e=>`<a class="lrow" href="#practice-${e.id}"><span class="t">${e.title}</span><span class="d">${e.kind==='pads'?'Pads':'Keys'} · ${e.bpm} BPM</span><span class="r">${starHtml(pBest[e.id]?.stars||0)}</span></a>`).join('')}</div></div>`}
 /* ---- engine ---- */
-const PR={ex:null,ev:[],state:'idle',speed:1,wait:false,metro:true,clock:0,last:0,raf:null,lo:48,hi:72,fb:[],listener:null,listenTimer:null};
-function prReset(){const e=PR.ex;PR.ev=e.notes.map(n=>({...n,hit:null,err:null}));PR.clock=-4;PR.fb=[];PR.metroNext=-4;PR.lastBeatClick=null}
+const PR={ex:null,ev:[],state:'idle',speed:1,wait:false,metro:true,clock:0,lastA:0,raf:null,lo:48,hi:72,fb:[],listener:null,clickedTo:-99,wrong:0};
+function prReset(){const e=PR.ex;PR.ev=e.notes.map(n=>({...n,hit:null,err:null}));PR.clock=-4;PR.fb=[];PR.clickedTo=-5;PR.wrong=0}
 function prSpb(){return 60/(PR.ex.bpm*PR.speed)}
-function prRange(e){if(e.kind==='pads')return;const ms=e.notes.map(n=>n.m);let lo=Math.min(...ms),hi=Math.max(...ms);lo=lo-(lo%12)-(lo%12>7?0:0);lo=Math.min(lo,hi-12);while(hi-lo<24)hi++;if(isBlack(lo))lo--;if(isBlack(hi))hi++;PR.lo=lo;PR.hi=hi}
-function prStart(mode){audio();stopSeq();prStop(true);prReset();PR.state=mode;PR.last=performance.now();PR.listener={onNote:n=>prInput(n),onNoteOff:()=>true};MIDI.listeners.add(PR.listener);prUI();PR.raf=requestAnimationFrame(prTick)}
+function prLatency(){return ctx?(ctx.outputLatency||0)+(ctx.baseLatency||0):0}
+function prRange(e){if(e.kind==='pads')return;const ms=e.notes.map(n=>n.m);let lo=Math.min(...ms),hi=Math.max(...ms);lo=lo-((lo%12)+12)%12;if(hi-lo<24)hi=lo+24;if(isBlack(hi))hi++;PR.lo=lo;PR.hi=hi}
+function prStart(mode){audio();stopSeq();prStop(true);prReset();PR.state=mode;PR.lastA=ctx.currentTime;PR.listener={onNote:n=>prInput(n)};MIDI.listeners.add(PR.listener);prUI();PR.raf=requestAnimationFrame(prTick)}
 function prStop(silent){cancelAnimationFrame(PR.raf);if(PR.listener)MIDI.listeners.delete(PR.listener);PR.listener=null;if(!silent&&PR.state!=='idle'){PR.state='idle';prUI()}}
-function prTick(now){const dt=(now-PR.last)/1000;PR.last=now;const spb=prSpb();let adv=dt/spb;const e=PR.ex;
- if(PR.state==='play'&&PR.wait&&PR.clock>=0){const next=PR.ev.filter(x=>!x.hit).reduce((m,x)=>Math.min(m,x.t),Infinity);if(PR.clock+adv>=next){adv=Math.max(0,next-PR.clock)}}
- const prev=PR.clock;PR.clock+=adv;
- if(PR.metro||PR.clock<0){for(let b=Math.ceil(prev);b<=PR.clock;b++){if(b!==PR.lastBeatClick){PR.lastBeatClick=b;prClick(b%4===0||b<0&&b%4===-4)}}}
- if(PR.state==='listen'){for(const n of PR.ev){if(!n.hit&&n.t<=PR.clock){n.hit='demo';if(e.kind==='pads')DR[LANES[n.lane]](ctx.currentTime,1);else tone(ctx.currentTime+.005,n.m,n.d*spb,'keys',.9,'Melody');prFlash(n,'demo')}}}
- if(PR.state==='play'&&!PR.wait){const win=.18/spb;for(const n of PR.ev){if(!n.hit&&PR.clock>n.t+win){n.hit='miss';PR.fb.push({n,txt:'Miss',cls:'miss',at:now})}}}
+const PR_WIN={perfect:.06,good:.12,ok:.22};
+function prTick(now){const at=ctx.currentTime;const dt=Math.max(0,Math.min(1,at-PR.lastA));PR.lastA=at;const spb=prSpb();let adv=dt/spb;const e=PR.ex;
+ if(PR.state==='play'&&PR.wait&&PR.clock>=0){const next=PR.ev.filter(x=>!x.hit).reduce((m,x)=>Math.min(m,x.t),Infinity);if(PR.clock+adv>=next)adv=Math.max(0,next-PR.clock)}
+ PR.clock+=adv;const blocked=PR.state==='play'&&PR.wait&&adv===0&&PR.clock>=0;
+ if((PR.metro||PR.clock<0)&&!blocked){const ahead=PR.clock+.12/spb;for(let b=Math.max(PR.clickedTo+1,Math.ceil(PR.clock-.02));b<=ahead;b++){const when=at+(b-PR.clock)*spb;prClick(((b%4)+4)%4===0,Math.max(at,when));PR.clickedTo=b}}
+ if(PR.state==='listen'){for(const n of PR.ev){if(!n.hit&&n.t<=PR.clock+.12/spb){n.hit='demo';const when=Math.max(at,at+(n.t-PR.clock)*spb);if(e.kind==='pads')DR[LANES[n.lane]](when,1);else epVoice(n.m,.75,when).stop(when+n.d*spb);setTimeout(()=>prFlash(n,'demo'),Math.max(0,(when-at)*1000))}}}
+ if(PR.state==='play'&&!PR.wait){const jc=PR.clock-prLatency()/spb;for(const n of PR.ev){if(!n.hit&&(jc-n.t)*spb>PR_WIN.ok){n.hit='miss';PR.fb.push({n,txt:'Miss',cls:'miss',at:now})}}}
  const end=Math.max(...PR.ev.map(n=>n.t+n.d))+1;prDraw(now);if(PR.clock>end&&PR.state!=='idle'){const was=PR.state;PR.state='idle';cancelAnimationFrame(PR.raf);if(PR.listener)MIDI.listeners.delete(PR.listener);PR.listener=null;if(was==='play')prResults();prUI();return}
  PR.raf=requestAnimationFrame(prTick)}
-function prClick(accent){const t=ctx.currentTime+.005;const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=accent?1500:1000;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(accent?.25:.15,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);o.connect(g);g.connect(master);o.start(t);o.stop(t+.06)}
-function prInput(n){const e=PR.ex;if(!e)return false;if(PR.state!=='play'){if(PR.state==='idle')return false;return true}
- const spb=prSpb();if(e.kind==='pads'){const lane=n.pad?((n.note-36+160)%16)%4:n.lane;DR[LANES[lane]](ctx.currentTime,.6+.4*(n.vel||1));prMatch(x=>x.lane===lane,n)}else{tone(ctx.currentTime+.005,n.note,.6,'keys',.9,'Melody');prMatch(x=>x.m===n.note,n)}return true}
-function prMatch(fit,n){const spb=prSpb();let best=null,bd=1e9;for(const x of PR.ev){if(x.hit||!fit(x))continue;const d=(PR.clock-x.t)*spb;if(Math.abs(d)<Math.abs(bd)){bd=d;best=x}}
- const now=performance.now();if(!best||Math.abs(bd)>(PR.wait?1e9:.18)){PR.fb.push({n:null,txt:'Wrong note',cls:'miss',at:now,key:n.note??n.lane});PR.wrong=(PR.wrong||0)+1;return}
- const ms=PR.wait?0:bd*1000;best.err=ms;best.hit=Math.abs(ms)<=45?'perfect':Math.abs(ms)<=100?'good':ms<0?'early':'late';PR.fb.push({n:best,txt:{perfect:'Perfect',good:'Good',early:'Early',late:'Late'}[best.hit],cls:best.hit,at:now})}
+function prClick(accent,t){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=accent?1500:1000;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(accent?.22:.13,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);o.connect(g);g.connect(master);o.start(t);o.stop(t+.06)}
+function prInput(n){const e=PR.ex;if(!e||PR.state!=='play')return;if(e.kind==='pads'){const lane=n.laneIdx??padLaneFor(n).idx;prMatch(x=>x.lane===lane)}else{const pc=((n.note%12)+12)%12;prMatch(x=>x.m%12===pc)}}
+function prNow(){const blocked=PR.wait&&PR.clock>=0;return PR.clock+(blocked?0:Math.max(0,Math.min(1,ctx.currentTime-PR.lastA))/prSpb())}
+function prMatch(fit){const spb=prSpb();const jc=prNow()-prLatency()/spb;let best=null,bd=1e9;for(const x of PR.ev){if(x.hit||!fit(x))continue;const d=(jc-x.t)*spb;if(Math.abs(d)<Math.abs(bd)){bd=d;best=x}}
+ const now=performance.now();if(!best||(!PR.wait&&Math.abs(bd)>PR_WIN.ok)||(PR.wait&&best.t>prNow()+.01)){PR.fb.push({n:null,txt:'Wrong note',cls:'miss',at:now});PR.wrong++;return}
+ const s=PR.wait?0:bd;best.err=s*1000;best.hit=Math.abs(s)<=PR_WIN.perfect?'perfect':Math.abs(s)<=PR_WIN.good?'good':s<0?'early':'late';PR.fb.push({n:best,txt:{perfect:'Perfect',good:'Good',early:'Early',late:'Late'}[best.hit],cls:best.hit,at:now})}
 function prFlash(n,cls){PR.fb.push({n,txt:'',cls,at:performance.now()})}
 function prResults(){const n=PR.ev.length,c=k=>PR.ev.filter(x=>x.hit===k).length;const score=PR.ev.reduce((s,x)=>s+({perfect:1,good:.8,early:.5,late:.5}[x.hit]||0),0)/n;const acc=Math.max(0,Math.round(score*100-(PR.wrong||0)*2));const stars=starsFor(acc);
  const id=PR.ex.id;const prevB=pBest[id];if(!prevB||acc>prevB.best){pBest[id]={best:acc,stars:Math.max(stars,prevB?.stars||0),speed:PR.speed};store.set('practice',pBest)}
@@ -1038,8 +1306,6 @@ function prDraw(now){const cv=$('#prCanvas');if(!cv)return;const dpr=devicePixel
  if(PR.state==='idle'&&!PR.fb.length&&PR.clock<=-4){g.fillStyle='#c9ced5';g.font='500 15px "IBM Plex Sans",sans-serif';g.textAlign='center';g.fillText('Press Listen to hear it, then Play to go',W/2,hitY/2)}}
 function prUI(){const s=PR.state;const pb=$('#prPlay'),lb=$('#prListen');if(pb)pb.textContent=s==='play'?'Stop':'Play';if(lb)lb.textContent=s==='listen'?'Stop':'Listen';if(s!=='idle'){const r=$('#prResult');if(r)r.innerHTML=''}}
 /* computer keyboard input for practice */
-addEventListener('keydown',e=>{if(!PR.ex||PR.state!=='play'||e.repeat||e.metaKey||e.ctrlKey||e.altKey)return;if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))return;const k=e.key.toLowerCase();
- if(PR.ex.kind==='pads'){const i='asdf'.indexOf(k);if(i>=0){e.preventDefault();e.stopImmediatePropagation();prInput({lane:i,vel:1})}}else{const m=KEYOF[k];if(m!==undefined){e.preventDefault();e.stopImmediatePropagation();prInput({note:m,vel:1})}}},true);
 /* ---- pages ---- */
 function viewPractice(){const groups=[['theory','Music theory on the keys'],['beat','Beat parts on keys and pads']];
  render(`${crumb('Practice')}<h1>Practice</h1><p class="lede">Short play-along exercises. Notes fall towards the keys or pads; hit them as they cross the line. Each run is scored on timing, and your best result is saved here.</p>
@@ -1064,6 +1330,8 @@ ${midiBox()}
 
 /* ================= views ================= */
 LESSONS.splice(LESSONS.findIndex(l=>l.id==='melody')+1,0,SAMPLING);LMAP.sampling=SAMPLING;
+Object.assign(LMAP,TCMAP);
+TRACKS.production=(()=>{const ids=LESSONS.map(l=>l.id);ids.splice(ids.indexOf('drums'),0,...ESSENTIALS);return ids})();
 const LPRACTICE={drums:['half-time','trap-groove','hat-roll','rage-drums'],'808':['roots-808'],melody:['pluggnb-chords','hook'],midi:['find-c']};
 const V=$('#view');
 function render(html,wide){for(const k in DDH)if(k!=='tBeat')delete DDH[k];V.classList.remove('view-in');V.classList.toggle('wide',!!wide);V.innerHTML=html;[...V.children].forEach((c,i)=>c.style.setProperty('--i',Math.min(i,10)));void V.offsetWidth;V.classList.add('view-in');mountFigs(V);bindHW(V);midiUI();fitAll();requestAnimationFrame(fitAll);setTimeout(fitAll,300);if(document.fonts)document.fonts.ready.then(fitAll)}
@@ -1072,23 +1340,25 @@ const profileBar=()=>{const k=K();return `<div class="meta-row"><a class="pill" 
 const lessonRow=(l,i)=>`<a class="lrow" href="#lesson-${l.id}"><span class="t"><span class="n">${i}</span>${l.title()}</span><span class="d">${l.mod}</span><span class="r">${done[l.id]?'<span class="ok">Done</span>':l.min+' min'}</span></a>`;
 const recipeRow=r=>`<a class="lrow" href="#beat-${r.id}"><span class="t">${r.name}</span><span class="d">${r.lane} · ${r.key}</span><span class="r">${r.bpm} BPM</span></a>`;
 const rackRows=r=>Object.entries(r.drums).map(([l,p],i)=>({name:l,lane:l,pat:p,color:LANECOL[l],trk:i+1}));
-function viewHome(){const idx=LESSONS.findIndex(l=>!done[l.id]);const ni=idx<0?0:idx,next=LESSONS[ni];const n=LESSONS.filter(l=>done[l.id]).length;
+function viewHome(){prof.track='production';saveProf();const PL=TRACKS.production.map(i=>LMAP[i]);const idx=PL.findIndex(l=>!done[l.id]);const ni=idx<0?0:idx,next=PL[ni];const n=PL.filter(l=>done[l.id]).length;const tn=TC.filter(l=>done[l.id]).length,tnext=TC.find(l=>!done[l.id])||TC[0];
  render(`<h1>Make beats in FL Studio with ${midiMode()?'your '+K().short:'your computer keyboard'}</h1>
 <p class="lede">Set up, drums, 808s, melodies, sampling, mixing and export, with every FL window drawn and labelled. Then practise along with your keyboard and build real beats.</p>
-<div class="next"><div><div class="k">${n?`Next up · lesson ${ni} of ${LESSONS.length-1}`:'Start here'}</div><div class="t">${next.title()}</div></div><a class="btn primary" href="#lesson-${next.id}">${n?'Continue':'Start the course'}</a></div>
-<h2>${midiMode()?'Your '+K().short:'Your keyboard'}</h2><p class="muted small" style="margin-top:4px">Play it: pads, keys and knobs work here${midiMode()?', and the ▶ button plays the beat in the top bar':''}. Wrong keyboard? <a href="#setup">Change it in My setup</a>.</p>
+<div class="next"><div><div class="k">${n?`Production course · lesson ${ni} of ${PL.length-1}`:'Production course: start here'}</div><div class="t">${next.title()}</div></div><a class="btn primary" href="#lesson-${next.id}">${n?'Continue':'Start the course'}</a></div>
+<div class="next" style="margin-top:10px"><div><div class="k">Music theory course · ${tn} of ${TC.length} lessons done</div><div class="t">${tnext.title()}</div></div><a class="btn" href="#lesson-${tnext.id}">${tn?'Continue':'Learn music theory'}</a></div>
+<h2>${midiMode()?'Your '+K().short:'Your keyboard'}</h2><p class="muted small" style="margin-top:4px">Play it: pads, keys and knobs work here${midiMode()?', and the ▶ button plays the beat':''}. Wrong keyboard? <a href="#setup">Change it in My setup</a>.</p>
 ${controller({})}
-<div class="split"><section><h2>Course</h2><div class="list">${LESSONS.map(lessonRow).join('')}</div></section>
+<div class="split"><section><h2>Course</h2><div class="list">${PL.map(lessonRow).join('')}</div></section>
 <section><h2>Beat recipes</h2><div class="list">${RECIPES.map(recipeRow).join('')}</div></section></div>`,true)}
 
 function viewSetup(){render(`${crumb('My setup')}<h1>Tell the course what you have</h1><p class="lede">Lessons, drawings and recipes rewrite themselves for your keyboard, FL edition and plugins. Saved in this browser only.</p>
 <div class="setrow"><div><h2>Keyboard</h2><p>The drawings, button names and setup steps follow this choice.</p></div><div class="opts">${Object.entries(KEYBOARDS).map(([id,k])=>`<label class="opt"><input type="radio" name="kb" value="${id}" id="kb-${id}" ${prof.kb===id?'checked':''}><span><b>${k.name}</b><small>${id==='none'?'Typing keyboard and mouse':k.summary.split(',').slice(0,2).join(',')}</small></span></label>`).join('')}</div></div>
 <div class="setrow"><div><h2>FL Studio edition</h2><p>Sets which stock plugins are ticked. Fine-tune on <a href="#plugins">Plugins</a>.</p></div><div class="opts">${ED.map(e=>`<label class="opt"><input type="radio" name="ed" value="${e}" id="ed-${e}" ${prof.edition===e?'checked':''}><span><b>${EDNAME[e]}</b><small>${{fruity:'Entry level: no audio recording, up to 8 audio clips',producer:'Audio recording, Edison, Sytrus, stem separation',signature:'Adds Gross Beat, NewTone, Pitcher, Harmless, Vintage Chorus',all:'Everything, including Harmor and Transistor Bass'}[e]}</small></span></label>`).join('')}</div></div>
 <div class="setrow"><div><h2>Computer</h2><p>Shortcuts use Cmd on Mac and Ctrl on Windows.</p></div><div class="opts">${[['mac','Mac'],['win','Windows']].map(([v,n])=>`<label class="opt"><input type="radio" name="os" value="${v}" id="os-${v}" ${prof.os===v?'checked':''}><span><b>${n}</b></span></label>`).join('')}</div></div>
+${midiCheckHtml()}
 <h2>Your controller</h2><p class="muted small" id="kbSummary" style="margin-top:4px">${K().summary}</p><div id="setupPreview">${controller({})}</div>
 <div class="row" style="margin-top:20px"><a class="btn primary" href="#lesson-start">Start the course</a><a class="btn" href="#plugins">Choose plugins</a></div>`,true);
  const redraw=()=>{const sp=$('#setupPreview');sp.innerHTML=controller({});$('#kbSummary').textContent=K().summary;bindHW(sp);fitAll()};
- $$('input[name=kb]').forEach(i=>i.addEventListener('change',()=>{prof.kb=i.value;saveProf();renderNav();redraw();toast('Keyboard: '+K().short)}));
+ bindMidiCheck();$$('input[name=kb]').forEach(i=>i.addEventListener('change',()=>{prof.kb=i.value;saveProf();renderNav();redraw();toast('Keyboard: '+K().short)}));
  $$('input[name=ed]').forEach(i=>i.addEventListener('change',()=>{prof.edition=i.value;const free=prof.have.filter(id=>P[id].src==='free');prof.have=[...defaultHave(i.value),...free];saveProf();toast(EDNAME[i.value]+' edition set')}));
  $$('input[name=os]').forEach(i=>i.addEventListener('change',()=>{prof.os=i.value;saveProf();toast('Shortcuts updated')}))}
 
@@ -1096,22 +1366,24 @@ function viewBeats(){render(`${crumb('Beat recipes')}<h1>Beat recipes</h1><p cla
 <div class="tablewrap"><table><thead><tr><th>Recipe</th><th>Style</th><th>Key</th><th class="num">BPM</th></tr></thead><tbody>${RECIPES.map(r=>`<tr><td><a href="#beat-${r.id}"><b>${r.name}</b></a><div class="small muted">${r.vibe}</div></td><td>${r.lane}<div class="small muted">${r.ref}</div></td><td>${r.key}</td><td class="num">${r.bpm}</td></tr>`).join('')}</tbody></table></div>
 ${tip('About “type beats”','Recipes teach the ingredients of a style: tempo, drums, chord colour, sound design. The artist names help you find the sound; nothing here copies a real song, and your beat should not either.')}`)}
 
-function viewLesson(id){const l=LMAP[id];if(!l)return viewHome();const i=LESSONS.indexOf(l),prev=LESSONS[i-1],next=LESSONS[i+1];
- render(`${crumb(['Course','#home'],l.mod,i===0?'Intro':'Lesson '+i+' of '+(LESSONS.length-1))}<h1>${l.title()}</h1><p class="small muted" style="margin-top:6px">${l.min} min · written for ${K().name} · <a href="#setup">change</a></p><div class="lesson">${l.body()}</div>${practiceCard(l.practice||LPRACTICE[l.id]||[])}
+function viewLesson(id){const l=LMAP[id];if(!l)return viewHome();const tr=trackOf(id);if(prof.track!==tr){prof.track=tr;saveProf()}if(l.steps)return viewTheoryLesson(l);const list=TRACKS[tr],i=list.indexOf(id),prev=LMAP[list[i-1]],next=LMAP[list[i+1]];
+ render(`${crumb(['Course','#home'],l.mod,i===0?'Intro':'Lesson '+i+' of '+(list.length-1))}<h1>${l.title()}</h1><p class="small muted" style="margin-top:6px">${l.min} min · written for ${K().name} · <a href="#setup">change</a></p><div class="lesson">${l.body()}</div>${practiceCard(l.practice||LPRACTICE[l.id]||[])}
 <div class="lessonnav"><div>${prev?`<a class="btn" href="#lesson-${prev.id}">Back: ${prev.title()}</a>`:''}</div><div class="row"><button class="btn" id="doneBtn">${done[id]?'Done ✓':'Mark as done'}</button>${next?`<a class="btn primary" href="#lesson-${next.id}">Next: ${next.title()}</a>`:`<a class="btn primary" href="#beats">Make a beat</a>`}</div></div>`);
  $('#doneBtn').onclick=()=>{done[id]=!done[id];store.set('done',done);renderNav();$('#doneBtn').textContent=done[id]?'Done ✓':'Mark as done';if(done[id])toast('Lesson marked done')};
  const checks=store.get('checks',{});$$('.check input').forEach(c=>{c.checked=!!checks[c.id];c.addEventListener('change',()=>{checks[c.id]=c.checked;store.set('checks',checks)})});
- const mt=$('#midiTest');if(mt)mt.onclick=()=>midiConnect();bindChop();bindLabs();bindTheory();
+ const mt=$('#midiTest');if(mt)mt.onclick=()=>midiConnect();bindChop();bindLabs();
  const sim=$('.sim');if(sim){$$('[data-win]',sim).forEach(b=>b.addEventListener('click',()=>simShow(sim,b.dataset.win)));simShow(sim,'Channel rack')}}
 
 /* ================= nav / routing ================= */
 const ICO={home:'<svg class="ico" viewBox="0 0 16 16"><path d="M2.5 7.5L8 3l5.5 4.5V13h-11z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',setup:'<svg class="ico" viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" stroke-width="1.4"/><circle cx="6" cy="4" r="1.6" fill="#fff" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="8" r="1.6" fill="#fff" stroke="currentColor" stroke-width="1.4"/><circle cx="5" cy="12" r="1.6" fill="#fff" stroke="currentColor" stroke-width="1.4"/></svg>',beats:'<svg class="ico" viewBox="0 0 16 16"><rect x="2" y="2" width="3" height="3" rx=".5" fill="currentColor"/><rect x="6.5" y="2" width="3" height="3" rx=".5" fill="none" stroke="currentColor"/><rect x="11" y="2" width="3" height="3" rx=".5" fill="currentColor"/><rect x="2" y="6.5" width="3" height="3" rx=".5" fill="none" stroke="currentColor"/><rect x="6.5" y="6.5" width="3" height="3" rx=".5" fill="currentColor"/><rect x="11" y="6.5" width="3" height="3" rx=".5" fill="none" stroke="currentColor"/><rect x="2" y="11" width="3" height="3" rx=".5" fill="currentColor"/><rect x="6.5" y="11" width="3" height="3" rx=".5" fill="none" stroke="currentColor"/><rect x="11" y="11" width="3" height="3" rx=".5" fill="currentColor"/></svg>',songs:'<svg class="ico" viewBox="0 0 16 16"><path d="M1.5 8h2l1.5-4 2 8 2-10 2 9 1.5-3h2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',keys:'<svg class="ico" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 2.5v7M10.5 2.5v7M8 9.5v4" stroke="currentColor" stroke-width="1.4"/></svg>',plugins:'<svg class="ico" viewBox="0 0 16 16"><path d="M5.5 1.5v4M10.5 1.5v4M3.5 5.5h9v2.5a4.5 4.5 0 0 1-9 0zM8 12.5v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',analyze:'<svg class="ico" viewBox="0 0 16 16"><path d="M1.5 8h1.5M4.5 4v8M7 2v12M9.5 5v6M12 3v10M14.5 8h0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',practice:'<svg class="ico" viewBox="0 0 16 16"><rect x="2" y="2" width="3" height="6" rx="1" fill="currentColor"/><rect x="6.5" y="5" width="3" height="5" rx="1" fill="currentColor"/><rect x="11" y="1" width="3" height="4" rx="1" fill="currentColor"/><path d="M1.5 13.5h13" stroke="currentColor" stroke-width="1.4"/></svg>',shortcuts:'<svg class="ico" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 10h7M4.5 7h1M7.5 7h1M10.5 7h1" stroke="currentColor" stroke-width="1.4"/></svg>'};
-function renderNav(){const h=location.hash.slice(1)||'home';const a=(href,label,on,ico)=>`<a href="#${href}" class="${on?'on':''}"${on?' aria-current="page"':''}>${ico}${label}</a>`;let html=a('home','Home',h==='home',ICO.home)+a('setup','My setup',h==='setup',ICO.setup);let grp='';
- LESSONS.forEach(l=>{if(l.mod!==grp){grp=l.mod;html+=`<div class="grp">${grp}</div>`}html+=`<a href="#lesson-${l.id}" class="${h==='lesson-'+l.id?'on':''}"${h==='lesson-'+l.id?' aria-current="page"':''}><span class="st-dot ${done[l.id]?'done':''}" aria-label="${done[l.id]?'Done':'Not done'}"></span>${l.title()}</a>`});
- html+=`<div class="grp">Make beats</div>`+a('practice','Practice',h.startsWith('practice'),ICO.practice)+a('beats','Beat recipes',h.startsWith('beat'),ICO.beats)+a('keys','Key finder',h==='keys',ICO.keys)+a('plugins','Plugins',h==='plugins',ICO.plugins)+a('shortcuts','Shortcuts',h==='shortcuts',ICO.shortcuts);
- $('#nav').innerHTML=html;const n=LESSONS.filter(l=>done[l.id]).length;$('#progBar').style.width=(n/LESSONS.length*100)+'%';$('#progTxt').textContent=`${n} of ${LESSONS.length}`}
-function route(){const h=location.hash.slice(1)||'home';drone(null);if(PR.state!=='idle')prStop();PR.ex=null;
- if(h==='setup')viewSetup();else if(h==='plugins')viewPlugins();else if(h==='beats')viewBeats();else if(h==='keys')viewKeys();else if(h==='practice')viewPractice();else if(h.startsWith('practice-'))viewExercise(h.slice(9));else if(h==='shortcuts')viewShortcuts();else if(h.startsWith('lesson-'))viewLesson(h.slice(7));else if(h.startsWith('beat-'))viewBeat(h.slice(5));else viewHome();
+function renderNav(){const h=location.hash.slice(1)||'home';const tr=prof.track||'production';const a=(href,label,on,ico)=>`<a href="#${href}" class="${on?'on':''}"${on?' aria-current="page"':''}>${ico}${label}</a>`;
+ let html=`<div class="track-switch" role="tablist" aria-label="Course"><a href="#home" role="tab" aria-selected="${tr==='production'}" class="${tr==='production'?'on':''}">Production</a><a href="#theory" role="tab" aria-selected="${tr==='theory'}" class="${tr==='theory'?'on':''}">Music theory</a></div>`;
+ html+=tr==='theory'?a('theory','Theory overview',h==='theory',ICO.home):a('home','Home',h==='home',ICO.home)+a('setup','My setup',h==='setup',ICO.setup);let grp='';const list=TRACKS[tr].map(i=>LMAP[i]);
+ list.forEach(l=>{const g=tr==='production'&&l.theory?'Music theory essentials':l.mod;if(g!==grp){grp=g;html+=`<div class="grp">${grp}</div>`}html+=`<a href="#lesson-${l.id}" class="${h==='lesson-'+l.id?'on':''}"${h==='lesson-'+l.id?' aria-current="page"':''}><span class="st-dot ${done[l.id]?'done':''}" aria-label="${done[l.id]?'Done':'Not done'}"></span>${l.title()}</a>`});
+ html+=`<div class="grp">Tools</div>`+a('practice','Practice',h.startsWith('practice'),ICO.practice)+(tr==='production'?a('beats','Beat recipes',h.startsWith('beat'),ICO.beats):'')+a('keys','Key finder',h==='keys',ICO.keys)+(tr==='production'?a('plugins','Plugins',h==='plugins',ICO.plugins)+a('shortcuts','Shortcuts',h==='shortcuts',ICO.shortcuts):a('setup','My setup',h==='setup',ICO.setup));
+ $('#nav').innerHTML=html;const n=list.filter(l=>done[l.id]).length;$('#progBar').style.width=(n/list.length*100)+'%';$('#progTxt').textContent=`${n} of ${list.length}`}
+function route(){const h=location.hash.slice(1)||'home';drone(null);if(PR.state!=='idle')prStop();PR.ex=null;if(TS.listener){MIDI.listeners.delete(TS.listener);TS.listener=null}tsClearTimers();tsStopGrid();TS.l=null;
+ if(h==='setup')viewSetup();else if(h==='plugins')viewPlugins();else if(h==='beats')viewBeats();else if(h==='keys')viewKeys();else if(h==='practice')viewPractice();else if(h.startsWith('practice-'))viewExercise(h.slice(9));else if(h==='shortcuts')viewShortcuts();else if(h==='theory')viewTheoryHome();else if(h.startsWith('lesson-'))viewLesson(h.slice(7));else if(h.startsWith('beat-'))viewBeat(h.slice(5));else viewHome();
  renderNav();syncBtns();window.scrollTo(0,0)}
 addEventListener('hashchange',route);
 $('#tBeatDD').innerHTML=ddHtml('tBeat',RECIPES.map(r=>({v:r.id,l:r.name,sel:r.id===cur.id})),'up-only');
